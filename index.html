@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Survivor Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --jungle: #1a2e1a;
+    --jungle-mid: #243824;
+    --jungle-light: #2d4a2d;
+    --torch: #ff6b1a;
+    --torch-glow: #ff9a3c;
+    --torch-dim: #c44a00;
+    --sand: #e8d5a3;
+    --sand-light: #f5ead0;
+    --sand-dark: #c4a96b;
+    --water: #1a6b8a;
+    --water-light: #2a9bbf;
+    --eliminated: #5a4a3a;
+    --text-primary: #f5ead0;
+    --text-secondary: #c4a96b;
+    --text-muted: #8a7a6a;
+    --card-bg: rgba(26, 46, 26, 0.85);
+    --card-border: rgba(200, 169, 107, 0.3);
+    --modal-bg: rgba(10, 20, 10, 0.97);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Lato', sans-serif;
+    background: var(--jungle);
+    color: var(--text-primary);
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Jungle background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 80%, rgba(255, 107, 26, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(26, 107, 138, 0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(26, 46, 26, 0) 0%, rgba(10, 16, 10, 0.5) 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Animated jungle leaves */
+  .leaf {
+    position: fixed;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.06;
+    font-size: 120px;
+  }
+  .leaf-1 { top: -20px; left: -30px; transform: rotate(-20deg); font-size: 180px; opacity: 0.05; }
+  .leaf-2 { top: 30%; right: -40px; transform: rotate(15deg); font-size: 150px; opacity: 0.04; }
+  .leaf-3 { bottom: 10%; left: -20px; transform: rotate(25deg); font-size: 140px; opacity: 0.05; }
+  .leaf-4 { bottom: -20px; right: -30px; transform: rotate(-10deg); font-size: 160px; opacity: 0.04; }
+
+  /* Header */
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: linear-gradient(180deg, rgba(10,16,10,0.98) 0%, rgba(26,46,26,0.95) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(200,169,107,0.2);
+    padding: env(safe-area-inset-top, 12px) 20px 0;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0;
+    padding-top: 4px;
+  }
+
+  .logo-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .torch-icon {
+    font-size: 28px;
+    animation: torchFlicker 2s ease-in-out infinite alternate;
+    filter: drop-shadow(0 0 8px var(--torch));
+  }
+
+  @keyframes torchFlicker {
+    0% { filter: drop-shadow(0 0 6px var(--torch)); transform: scale(1); }
+    33% { filter: drop-shadow(0 0 12px var(--torch-glow)); transform: scale(1.05) rotate(2deg); }
+    66% { filter: drop-shadow(0 0 8px var(--torch)); transform: scale(0.98) rotate(-1deg); }
+    100% { filter: drop-shadow(0 0 14px var(--torch-glow)); transform: scale(1.03) rotate(1deg); }
+  }
+
+  .app-title {
+    font-family: 'Cinzel', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--sand);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .app-subtitle {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    color: var(--torch);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: -2px;
+  }
+
+  .settings-btn {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: rgba(200,169,107,0.1);
+    border: 1px solid var(--card-border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s;
+  }
+  .settings-btn:active { transform: scale(0.92); background: rgba(200,169,107,0.2); }
+
+  /* Season badge */
+  .season-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(255,107,26,0.15);
+    border: 1px solid rgba(255,107,26,0.3);
+    border-radius: 20px;
+    margin: 8px 0 10px;
+    font-size: 12px;
+    color: var(--torch-glow);
+    font-family: 'Cinzel', serif;
+    letter-spacing: 1px;
+  }
+
+  .season-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--torch);
+    box-shadow: 0 0 6px var(--torch);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* Tab bar */
+  .tab-bar {
+    display: flex;
+    gap: 4px;
+    padding-bottom: 0;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px 4px;
+    text-align: center;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .tab.active {
+    color: var(--torch-glow);
+    border-bottom-color: var(--torch);
+  }
+
+  /* Main content */
+  .main {
+    position: relative;
+    z-index: 1;
+    padding: 16px;
+    padding-bottom: 32px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Section headers */
+  .section-title {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--sand-dark);
+    margin: 20px 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--card-border), transparent);
+  }
+
+  /* Team cards */
+  .team-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .team-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: transform 0.2s;
+  }
+
+  .team-card:active { transform: scale(0.99); }
+
+  .team-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(200,169,107,0.12) 0%, rgba(200,169,107,0.04) 100%);
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .player-avatar {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cinzel', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,0.2);
+  }
+
+  .player-name {
+    font-family: 'Cinzel', serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--sand);
+  }
+
+  .player-alive-count {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'Lato', sans-serif;
+  }
+
+  .alive-count-num {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--torch-glow);
+    display: block;
+    text-align: right;
+  }
+
+  .contestants-list {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .contestant-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    background: rgba(255,255,255,0.03);
+    transition: all 0.3s;
+  }
+
+  .contestant-row.eliminated {
+    opacity: 0.45;
+    background: rgba(90,74,58,0.2);
+  }
+
+  .contestant-status {
+    font-size: 16px;
+    flex-shrink: 0;
+    width: 22px;
+    text-align: center;
+  }
+
+  .contestant-name {
+    font-size: 14px;
+    color: var(--text-primary);
+    flex: 1;
+    transition: all 0.3s;
+  }
+
+  .contestant-row.eliminated .contestant-name {
+    text-decoration: line-through;
+    color: var(--text-muted);
+  }
+
+  .elim-btn {
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,107,26,0.4);
+    background: rgba(255,107,26,0.1);
+    color: var(--torch);
+    font-size: 11px;
+    font-family: 'Cinzel', serif;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .elim-btn:active { background: rgba(255,107,26,0.3); transform: scale(0.95); }
+
+  /* No season state */
+  .no-season {
+    text-align: center;
+    padding: 60px 20px;
+  }
+
+  .no-season-icon {
+    font-size: 64px;
+    display: block;
+    margin-bottom: 16px;
+    filter: drop-shadow(0 0 20px rgba(255,107,26,0.4));
+    animation: torchFlicker 2s ease-in-out infinite alternate;
+  }
+
+  .no-season h2 {
+    font-family: 'Cinzel', serif;
+    font-size: 20px;
+    color: var(--sand);
+    margin-bottom: 8px;
+  }
+
+  .no-season p {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--torch) 0%, var(--torch-dim) 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(255,107,26,0.3);
+    transition: all 0.2s;
+  }
+  .btn-primary:active { transform: scale(0.98); box-shadow: 0 2px 10px rgba(255,107,26,0.2); }
+
+  .btn-secondary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 14px;
+    background: rgba(200,169,107,0.1);
+    color: var(--sand);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-secondary:active { background: rgba(200,169,107,0.2); transform: scale(0.98); }
+
+  .btn-danger {
+    background: rgba(180,40,40,0.2);
+    border-color: rgba(220,60,60,0.4);
+    color: #ff7070;
+  }
+
+  /* Past seasons */
+  .season-history-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 10px;
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .season-number {
+    font-family: 'Cinzel', serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--torch);
+    line-height: 1;
+    text-shadow: 0 0 20px rgba(255,107,26,0.4);
+    min-width: 36px;
+    text-align: center;
+  }
+
+  .season-details {
+    flex: 1;
+  }
+
+  .season-name {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    color: var(--sand);
+    margin-bottom: 4px;
+  }
+
+  .season-winner-line {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .season-winner-line span {
+    color: var(--torch-glow);
+    font-weight: 700;
+  }
+
+  .trophy-icon {
+    font-size: 28px;
+    filter: drop-shadow(0 0 8px gold);
+  }
+
+  /* =============== MODALS =============== */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    display: flex;
+    align-items: flex-end;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal-sheet {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    background: var(--modal-bg);
+    border: 1px solid var(--card-border);
+    border-bottom: none;
+    border-radius: 24px 24px 0 0;
+    padding: 8px 20px calc(env(safe-area-inset-bottom, 0px) + 24px);
+    min-height: 75vh;
+    max-height: 92vh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .modal-overlay.open .modal-sheet {
+    transform: translateY(0);
+  }
+
+  .modal-handle {
+    width: 36px; height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    margin: 8px auto 20px;
+  }
+
+  .modal-title {
+    font-family: 'Cinzel', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--sand);
+    text-align: center;
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+  }
+
+  .modal-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-label {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--sand-dark);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 13px 16px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: 'Lato', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--torch); }
+  .form-input::placeholder { color: var(--text-muted); }
+
+  textarea.form-input {
+    resize: none;
+    height: 120px;
+    line-height: 1.6;
+  }
+
+  /* Contestant input list */
+  .contestant-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .contestant-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .contestant-input-row .form-input {
+    flex: 1;
+  }
+
+  .remove-contestant-btn {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: rgba(180,40,40,0.15);
+    border: 1px solid rgba(220,60,60,0.3);
+    color: #ff7070;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .remove-contestant-btn:active { background: rgba(180,40,40,0.3); transform: scale(0.9); }
+
+  .add-contestant-btn {
+    width: 100%;
+    padding: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px dashed var(--card-border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: 'Lato', sans-serif;
+    transition: all 0.2s;
+  }
+  .add-contestant-btn:active { background: rgba(255,255,255,0.08); }
+
+  /* Draft reveal animation */
+  .draft-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.95);
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s;
+  }
+
+  .draft-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .draft-title {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .draft-season-name {
+    font-family: 'Cinzel', serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--sand);
+    text-align: center;
+    margin-bottom: 40px;
+    letter-spacing: 2px;
+  }
+
+  .draft-card {
+    width: 100%;
+    max-width: 360px;
+    background: linear-gradient(135deg, rgba(26,46,26,0.9) 0%, rgba(10,20,10,0.95) 100%);
+    border: 2px solid var(--torch);
+    border-radius: 20px;
+    padding: 28px;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(255,107,26,0.3);
+    transform: scale(0.8) translateY(30px);
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .draft-card.reveal {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+
+  .draft-card-player {
+    font-size: 13px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    font-family: 'Cinzel', serif;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .draft-card-name {
+    font-family: 'Cinzel', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--sand);
+    margin-bottom: 16px;
+  }
+
+  .draft-card-contestants {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .draft-contestant-pill {
+    padding: 8px 16px;
+    background: rgba(255,107,26,0.12);
+    border: 1px solid rgba(255,107,26,0.3);
+    border-radius: 30px;
+    color: var(--torch-glow);
+    font-size: 15px;
+    font-weight: 700;
+    animation: pillPop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+    transform: scale(0.7);
+  }
+
+  @keyframes pillPop {
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .draft-progress {
+    display: flex;
+    gap: 6px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .draft-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    transition: all 0.3s;
+  }
+
+  .draft-dot.done {
+    background: var(--torch);
+    box-shadow: 0 0 8px var(--torch);
+  }
+
+  .draft-dot.current {
+    background: var(--torch-glow);
+    box-shadow: 0 0 10px var(--torch-glow);
+    transform: scale(1.3);
+  }
+
+  .draft-next-btn {
+    margin-top: 32px;
+    padding: 14px 40px;
+    background: linear-gradient(135deg, var(--torch) 0%, var(--torch-dim) 100%);
+    border: none;
+    border-radius: 30px;
+    color: white;
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(255,107,26,0.4);
+  }
+  .draft-next-btn:active { transform: scale(0.96); }
+
+  /* Elimination confirmation */
+  .elim-confirm {
+    text-align: center;
+    padding: 24px 0;
+  }
+
+  .elim-confirm .torch-big {
+    font-size: 72px;
+    display: block;
+    margin-bottom: 16px;
+    animation: torchFlicker 1.5s ease-in-out infinite alternate;
+    filter: drop-shadow(0 0 20px rgba(255,107,26,0.6));
+  }
+
+  .elim-confirm h3 {
+    font-family: 'Cinzel', serif;
+    font-size: 22px;
+    color: var(--sand);
+    margin-bottom: 8px;
+  }
+
+  .elim-confirm p {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  /* End season */
+  .winner-select-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .winner-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .winner-option:active { transform: scale(0.98); }
+  .winner-option.selected {
+    background: rgba(255,107,26,0.12);
+    border-color: var(--torch);
+  }
+
+  .winner-option-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  /* Settings */
+  .player-settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .player-setting-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .color-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: rgba(30,50,30,0.95);
+    border: 1px solid var(--card-border);
+    border-radius: 30px;
+    padding: 10px 20px;
+    color: var(--text-primary);
+    font-size: 13px;
+    z-index: 400;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+    backdrop-filter: blur(10px);
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(200,169,107,0.2); border-radius: 2px; }
+
+  /* Avatar colors */
+  .av-0 { background: linear-gradient(135deg, #c0392b, #922b21); }
+  .av-1 { background: linear-gradient(135deg, #1a6b8a, #0d4f69); }
+  .av-2 { background: linear-gradient(135deg, #2d7a2d, #1a5c1a); }
+  .av-3 { background: linear-gradient(135deg, #8e44ad, #6c3483); }
+  .av-4 { background: linear-gradient(135deg, #d4841a, #a8620e); }
+  .av-5 { background: linear-gradient(135deg, #2c7873, #1a5c58); }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--card-border), transparent);
+    margin: 20px 0;
+  }
+
+  .empty-history {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+
+  /* Win banner */
+  .win-banner {
+    background: linear-gradient(135deg, rgba(200,169,107,0.15) 0%, rgba(255,215,0,0.08) 100%);
+    border: 1px solid rgba(200,169,107,0.5);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .win-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center top, rgba(255,215,0,0.1) 0%, transparent 60%);
+  }
+
+  .win-banner h3 {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: var(--sand-dark);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .win-banner .winner-name {
+    font-family: 'Cinzel', serif;
+    font-size: 24px;
+    font-weight: 900;
+    color: gold;
+    text-shadow: 0 0 20px rgba(255,215,0,0.5);
+  }
+
+  .win-banner .winner-contestant {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Jungle atmosphere -->
+<div class="leaf leaf-1">🌿</div>
+<div class="leaf leaf-2">🌴</div>
+<div class="leaf leaf-3">🍃</div>
+<div class="leaf leaf-4">🌿</div>
+
+<!-- Header -->
+<header class="app-header">
+  <div class="header-top">
+    <div class="logo-area">
+      <div class="torch-icon">🔥</div>
+      <div>
+        <div class="app-title">Survivor</div>
+        <div class="app-subtitle">Tribe Tracker</div>
+      </div>
+    </div>
+    <button class="settings-btn" onclick="openSettings()">⚙️</button>
+  </div>
+  <div id="seasonBadge" class="season-badge" style="display:none;">
+    <div class="season-dot"></div>
+    <span id="seasonBadgeText">Loading...</span>
+  </div>
+  <div class="tab-bar">
+    <div class="tab active" onclick="switchTab('current')">🏝️ Current</div>
+    <div class="tab" onclick="switchTab('history')">📜 History</div>
+    <div class="tab" onclick="switchTab('manage')">⚔️ Manage</div>
+  </div>
+</header>
+
+<!-- Main Content -->
+<main class="main">
+
+  <!-- CURRENT SEASON TAB -->
+  <div id="tab-current" class="tab-content active">
+    <div id="currentContent">
+      <div class="loading-state"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div id="tab-history" class="tab-content">
+    <div id="historyContent">
+      <div class="loading-state"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- MANAGE TAB -->
+  <div id="tab-manage" class="tab-content">
+    <div class="section-title">🔥 Season Controls</div>
+
+    <button class="btn-primary" onclick="openNewSeasonModal()" style="margin-bottom:12px;">
+      🏝️ Start New Season / Draft
+    </button>
+
+    <div id="endSeasonBtn" style="display:none;">
+      <button class="btn-secondary btn-danger" onclick="openEndSeasonModal()">
+        🏆 End Season & Crown Winner
+      </button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">🌴 Script Setup</div>
+    <div class="form-group">
+      <label class="form-label">Google Apps Script URL</label>
+      <input type="text" class="form-input" id="scriptUrlInput" placeholder="Paste your Apps Script URL" style="font-size:12px;">
+    </div>
+    <button class="btn-secondary" onclick="saveScriptUrl()" style="margin-bottom:8px;">Save URL</button>
+  </div>
+
+</main>
+
+<!-- ============ NEW SEASON MODAL ============ -->
+<div class="modal-overlay" id="newSeasonModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🏝️ New Season</div>
+    <div class="modal-subtitle">Enter season details then draft the tribes</div>
+
+    <div class="form-group">
+      <label class="form-label">Season Name</label>
+      <input type="text" class="form-input" id="newSeasonName" placeholder="e.g. Survivor: Tocantins">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Contestant Names <span style="color:var(--text-muted);font-size:10px;">(one per field)</span></label>
+      <div class="contestant-inputs" id="contestantInputs">
+        <!-- filled dynamically -->
+      </div>
+      <button class="add-contestant-btn" onclick="addContestantInput()" style="margin-top:8px;">+ Add Contestant</button>
+    </div>
+
+    <div style="margin-top: 24px; display:flex; flex-direction:column; gap:10px;">
+      <button class="btn-primary" onclick="startDraft()">🔥 Start Draft</button>
+      <button class="btn-secondary" onclick="closeModal('newSeasonModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ELIMINATION MODAL ============ -->
+<div class="modal-overlay" id="elimModal">
+  <div class="modal-sheet" style="min-height:auto;">
+    <div class="modal-handle"></div>
+    <div class="elim-confirm">
+      <span class="torch-big">🔥</span>
+      <h3>Snuff the Torch?</h3>
+      <p>The tribe has spoken. <strong id="elimName" style="color:var(--sand)"></strong> will be eliminated.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button class="btn-primary" id="confirmedElimBtn" onclick="confirmElimination()">
+          🔥 Eliminate
+        </button>
+        <button class="btn-secondary" onclick="closeModal('elimModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ END SEASON MODAL ============ -->
+<div class="modal-overlay" id="endSeasonModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🏆 Crown the Winner</div>
+    <div class="modal-subtitle">Who has the last Survivor standing?</div>
+
+    <div class="section-title">Select Winning Contestant</div>
+    <div class="winner-select-grid" id="winnerSelectGrid"></div>
+
+    <div style="margin-top: 24px; display:flex; flex-direction:column; gap:10px;">
+      <button class="btn-primary" onclick="confirmEndSeason()">🏆 Crown Winner</button>
+      <button class="btn-secondary" onclick="closeModal('endSeasonModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SETTINGS MODAL ============ -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚙️ Settings</div>
+    <div class="modal-subtitle">Manage tribe members</div>
+
+    <div class="section-title">🌴 Tribe Members</div>
+    <div class="player-settings-list" id="playerSettingsList"></div>
+    <button class="add-contestant-btn" onclick="addPlayerInput()" style="margin-top:8px;">+ Add Member</button>
+
+    <div style="margin-top: 24px; display:flex; flex-direction:column; gap:10px;">
+      <button class="btn-primary" onclick="savePlayers()">Save Members</button>
+      <button class="btn-secondary" onclick="closeModal('settingsModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DRAFT REVEAL OVERLAY ============ -->
+<div class="draft-overlay" id="draftOverlay">
+  <div class="draft-title">The Tribes Have Spoken</div>
+  <div class="draft-season-name" id="draftSeasonTitle"></div>
+
+  <div class="draft-card" id="draftCard">
+    <div class="draft-card-player" id="draftCardPlayer"></div>
+    <div class="draft-card-name" id="draftCardName"></div>
+    <div class="draft-card-contestants" id="draftCardContestants"></div>
+  </div>
+
+  <div class="draft-progress" id="draftProgress"></div>
+  <button class="draft-next-btn" id="draftNextBtn" onclick="draftNext()">Next →</button>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2WDjiUHw94l8k1CxnGzcUpCyjS7Ko1rhC9yZcdV-ZybqA3UfbKFiIQMjq30H81smo/exec';
+
+let state = {
+  players: ['Amy', 'Ty', 'Lacee', 'Sam', 'Melissa', 'Aaron'],
+  currentSeason: null,
+  seasons: [],
+  loaded: false,
+};
+
+let elimTarget = { seasonId: null, contestantName: null };
+let selectedWinner = null;
+let draftData = { assignments: [], index: 0, seasonName: '' };
+
+// Avatar colors for players
+const AVATAR_COLORS = ['av-0','av-1','av-2','av-3','av-4','av-5'];
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded', async () => {
+  // Load saved players from localStorage
+  const savedPlayers = localStorage.getItem('survivor_players');
+  if (savedPlayers) state.players = JSON.parse(savedPlayers);
+
+  // Set script URL input
+  document.getElementById('scriptUrlInput').value = SCRIPT_URL;
+
+  await loadData();
+});
+
+async function loadData() {
+  try {
+    const url = getScriptUrl();
+    if (!url) {
+      renderNoUrl();
+      return;
+    }
+
+    const res = await fetch(`${url}?action=getSeasons`);
+    const data = await res.json();
+    state.seasons = data.seasons || [];
+    state.currentSeason = state.seasons.find(s => s.status === 'active') || null;
+    state.loaded = true;
+
+    renderCurrentTab();
+    renderHistoryTab();
+    updateSeasonBadge();
+    updateEndSeasonBtn();
+  } catch (err) {
+    renderError();
+  }
+}
+
+function getScriptUrl() {
+  return localStorage.getItem('survivor_script_url') || SCRIPT_URL;
+}
+
+function saveScriptUrl() {
+  const url = document.getElementById('scriptUrlInput').value.trim();
+  localStorage.setItem('survivor_script_url', url);
+  showToast('✅ Script URL saved');
+  loadData();
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderCurrentTab() {
+  const el = document.getElementById('currentContent');
+  if (!state.loaded) { el.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>'; return; }
+
+  if (!state.currentSeason) {
+    el.innerHTML = `
+      <div class="no-season">
+        <span class="no-season-icon">🔥</span>
+        <h2>No Active Season</h2>
+        <p>The fire hasn't been lit yet.<br>Head to the Manage tab to start a new season and draft your tribes.</p>
+        <button class="btn-primary" onclick="switchTab('manage')">🏝️ Start a Season</button>
+      </div>`;
+    return;
+  }
+
+  const s = state.currentSeason;
+  let html = '<div class="team-grid">';
+
+  state.players.forEach((player, pi) => {
+    const team = s.teams[player] || [];
+    if (team.length === 0) return;
+    const alive = team.filter(c => !c.eliminated);
+
+    html += `
+      <div class="team-card">
+        <div class="team-header">
+          <div class="player-avatar ${AVATAR_COLORS[pi % 6]}">${initials(player)}</div>
+          <div>
+            <div class="player-name">${player}</div>
+          </div>
+          <div class="player-alive-count">
+            <span class="alive-count-num">${alive.length}</span>
+            alive
+          </div>
+        </div>
+        <div class="contestants-list">`;
+
+    team.forEach(c => {
+      html += `
+        <div class="contestant-row ${c.eliminated ? 'eliminated' : ''}" id="crow-${slugify(s.id)}-${slugify(c.name)}">
+          <div class="contestant-status">${c.eliminated ? '🔥' : '🌴'}</div>
+          <div class="contestant-name">${c.name}</div>
+          ${!c.eliminated ? `<button class="elim-btn" onclick="promptEliminate('${s.id}','${escJs(c.name)}')">Eliminate</button>` : ''}
+        </div>`;
+    });
+
+    html += `</div></div>`;
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderHistoryTab() {
+  const el = document.getElementById('historyContent');
+  const past = state.seasons.filter(s => s.status === 'completed');
+
+  if (past.length === 0) {
+    el.innerHTML = `
+      <div class="empty-history">
+        <span class="empty-icon">📜</span>
+        No completed seasons yet.<br>Your tribe's history will be written here.
+      </div>`;
+    return;
+  }
+
+  // Sort by id descending (newest first)
+  past.sort((a, b) => b.id - a.id);
+
+  let html = '';
+  past.forEach((s, i) => {
+    const num = past.length - i;
+    html += `
+      <div class="season-history-card">
+        <div class="season-number">${extractNum(s.name) || num}</div>
+        <div class="season-details">
+          <div class="season-name">${s.name}</div>
+          <div class="season-winner-line">🏆 <span>${s.winnerPlayer || '—'}</span> won with ${s.winnerContestant || '—'}</div>
+        </div>
+        <div class="trophy-icon">🏆</div>
+      </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+function updateSeasonBadge() {
+  const badge = document.getElementById('seasonBadge');
+  const text = document.getElementById('seasonBadgeText');
+  if (state.currentSeason) {
+    badge.style.display = 'flex';
+    text.textContent = state.currentSeason.name;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function updateEndSeasonBtn() {
+  document.getElementById('endSeasonBtn').style.display = state.currentSeason ? 'block' : 'none';
+}
+
+function renderNoUrl() {
+  document.getElementById('currentContent').innerHTML = `
+    <div class="no-season">
+      <span class="no-season-icon">⚙️</span>
+      <h2>Setup Required</h2>
+      <p>Go to the Manage tab and enter your Google Apps Script URL to get started.</p>
+      <button class="btn-primary" onclick="switchTab('manage')">Go to Manage</button>
+    </div>`;
+}
+
+function renderError() {
+  document.getElementById('currentContent').innerHTML = `
+    <div class="no-season">
+      <span class="no-season-icon">⚠️</span>
+      <h2>Connection Error</h2>
+      <p>Couldn't reach the backend. Check your Apps Script URL and make sure it's deployed correctly.</p>
+    </div>`;
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const names = ['current','history','manage'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+}
+
+// ============================================================
+// NEW SEASON MODAL
+// ============================================================
+function openNewSeasonModal() {
+  document.getElementById('newSeasonName').value = '';
+  const inputs = document.getElementById('contestantInputs');
+  inputs.innerHTML = '';
+  // Default 18 slots
+  for (let i = 0; i < 18; i++) addContestantInput();
+  openModal('newSeasonModal');
+}
+
+function addContestantInput() {
+  const inputs = document.getElementById('contestantInputs');
+  const row = document.createElement('div');
+  row.className = 'contestant-input-row';
+  row.innerHTML = `
+    <input type="text" class="form-input contestant-name-input" placeholder="Contestant name" style="font-size:14px;">
+    <button class="remove-contestant-btn" onclick="this.parentElement.remove()">×</button>`;
+  inputs.appendChild(row);
+}
+
+function startDraft() {
+  const seasonName = document.getElementById('newSeasonName').value.trim();
+  if (!seasonName) { showToast('⚠️ Enter a season name'); return; }
+
+  const names = [...document.querySelectorAll('.contestant-name-input')]
+    .map(i => i.value.trim()).filter(Boolean);
+
+  if (names.length < state.players.length) {
+    showToast(`⚠️ Need at least ${state.players.length} contestants`);
+    return;
+  }
+
+  // Shuffle contestants
+  const shuffled = shuffle([...names]);
+
+  // Distribute to players
+  const assignments = state.players.map(() => ({ contestants: [] }));
+  shuffled.forEach((c, i) => assignments[i % state.players.length].contestants.push(c));
+
+  const fullAssignments = assignments.map((a, i) => ({
+    player: state.players[i],
+    contestants: a.contestants
+  }));
+
+  // Close modal
+  closeModal('newSeasonModal');
+
+  // Start draft reveal
+  draftData = { assignments: fullAssignments, index: 0, seasonName };
+  openDraftReveal();
+}
+
+// ============================================================
+// DRAFT REVEAL
+// ============================================================
+function openDraftReveal() {
+  const overlay = document.getElementById('draftOverlay');
+  document.getElementById('draftSeasonTitle').textContent = draftData.seasonName;
+
+  // Build progress dots
+  const progress = document.getElementById('draftProgress');
+  progress.innerHTML = draftData.assignments.map((_, i) =>
+    `<div class="draft-dot" id="ddot-${i}"></div>`).join('');
+
+  overlay.classList.add('open');
+  setTimeout(() => showDraftCard(0), 300);
+}
+
+function showDraftCard(index) {
+  const { assignments } = draftData;
+  if (index >= assignments.length) return;
+
+  draftData.index = index;
+  const a = assignments[index];
+  const pi = state.players.indexOf(a.player);
+
+  // Update dots
+  document.querySelectorAll('.draft-dot').forEach((d, i) => {
+    d.classList.remove('done', 'current');
+    if (i < index) d.classList.add('done');
+    if (i === index) d.classList.add('current');
+  });
+
+  // Card
+  const card = document.getElementById('draftCard');
+  card.classList.remove('reveal');
+  document.getElementById('draftCardPlayer').textContent = 'Tribe of';
+  document.getElementById('draftCardName').textContent = a.player;
+
+  const contestantsEl = document.getElementById('draftCardContestants');
+  contestantsEl.innerHTML = '';
+
+  void card.offsetWidth; // reflow
+  card.classList.add('reveal');
+
+  // Animate contestants
+  a.contestants.forEach((c, ci) => {
+    setTimeout(() => {
+      const pill = document.createElement('div');
+      pill.className = 'draft-contestant-pill';
+      pill.textContent = c;
+      pill.style.animationDelay = '0ms';
+      contestantsEl.appendChild(pill);
+    }, 300 + ci * 180);
+  });
+
+  // Update button
+  const btn = document.getElementById('draftNextBtn');
+  btn.textContent = index < assignments.length - 1 ? 'Next →' : '🔥 Save & Begin Season';
+}
+
+async function draftNext() {
+  const { assignments, index } = draftData;
+  if (index < assignments.length - 1) {
+    showDraftCard(index + 1);
+  } else {
+    // Save to backend
+    document.getElementById('draftNextBtn').innerHTML = '<div class="spinner"></div>';
+    try {
+      const url = getScriptUrl();
+      await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'startSeason',
+          seasonName: draftData.seasonName,
+          assignments: draftData.assignments,
+        })
+      });
+      document.getElementById('draftOverlay').classList.remove('open');
+      showToast('🔥 Season started!');
+      await loadData();
+      switchTab('current');
+    } catch (e) {
+      showToast('⚠️ Error saving season');
+      document.getElementById('draftNextBtn').textContent = '🔥 Save & Begin Season';
+    }
+  }
+}
+
+// ============================================================
+// ELIMINATION
+// ============================================================
+function promptEliminate(seasonId, contestantName) {
+  elimTarget = { seasonId, contestantName };
+  document.getElementById('elimName').textContent = contestantName;
+  openModal('elimModal');
+}
+
+async function confirmElimination() {
+  const btn = document.getElementById('confirmedElimBtn');
+  btn.innerHTML = '<div class="spinner"></div>';
+
+  try {
+    const url = getScriptUrl();
+    await fetch(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'eliminateContestant',
+        seasonId: elimTarget.seasonId,
+        contestantName: elimTarget.contestantName,
+      })
+    });
+    closeModal('elimModal');
+    showToast(`🔥 ${elimTarget.contestantName} has been eliminated`);
+    await loadData();
+  } catch (e) {
+    showToast('⚠️ Error');
+  }
+
+  btn.innerHTML = '🔥 Eliminate';
+}
+
+// ============================================================
+// END SEASON
+// ============================================================
+function openEndSeasonModal() {
+  selectedWinner = null;
+  const grid = document.getElementById('winnerSelectGrid');
+  grid.innerHTML = '';
+
+  if (!state.currentSeason) return;
+
+  // Show all alive contestants with their player
+  state.players.forEach((player, pi) => {
+    const team = state.currentSeason.teams[player] || [];
+    const alive = team.filter(c => !c.eliminated);
+    alive.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'winner-option';
+      div.innerHTML = `
+        <div class="winner-option-avatar ${AVATAR_COLORS[pi % 6]}">${initials(player)}</div>
+        <div>
+          <div style="font-size:15px;font-family:'Cinzel',serif;color:var(--sand);">${c.name}</div>
+          <div style="font-size:12px;color:var(--text-muted);">Team ${player}</div>
+        </div>`;
+      div.onclick = () => {
+        document.querySelectorAll('.winner-option').forEach(o => o.classList.remove('selected'));
+        div.classList.add('selected');
+        selectedWinner = { player, contestant: c.name };
+      };
+      grid.appendChild(div);
+    });
+  });
+
+  openModal('endSeasonModal');
+}
+
+async function confirmEndSeason() {
+  if (!selectedWinner) { showToast('⚠️ Select the winning contestant'); return; }
+
+  try {
+    const url = getScriptUrl();
+    await fetch(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'endSeason',
+        seasonId: state.currentSeason.id,
+        winnerPlayer: selectedWinner.player,
+        winnerContestant: selectedWinner.contestant,
+      })
+    });
+    closeModal('endSeasonModal');
+    showToast(`🏆 ${selectedWinner.player} wins the season!`);
+    await loadData();
+    switchTab('history');
+  } catch (e) {
+    showToast('⚠️ Error ending season');
+  }
+}
+
+// ============================================================
+// SETTINGS / PLAYERS
+// ============================================================
+function openSettings() {
+  renderPlayerSettings();
+  openModal('settingsModal');
+}
+
+function renderPlayerSettings() {
+  const list = document.getElementById('playerSettingsList');
+  list.innerHTML = '';
+  state.players.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'player-setting-row';
+    row.innerHTML = `
+      <div class="player-avatar ${AVATAR_COLORS[i % 6]}" style="width:32px;height:32px;font-size:12px;">${initials(p)}</div>
+      <input type="text" class="form-input player-name-input" value="${p}" style="font-size:14px;">
+      <button class="remove-contestant-btn" onclick="this.parentElement.remove()">×</button>`;
+    list.appendChild(row);
+  });
+}
+
+function addPlayerInput() {
+  const list = document.getElementById('playerSettingsList');
+  const i = list.children.length;
+  const row = document.createElement('div');
+  row.className = 'player-setting-row';
+  row.innerHTML = `
+    <div class="player-avatar ${AVATAR_COLORS[i % 6]}" style="width:32px;height:32px;font-size:12px;">?</div>
+    <input type="text" class="form-input player-name-input" placeholder="Player name" style="font-size:14px;">
+    <button class="remove-contestant-btn" onclick="this.parentElement.remove()">×</button>`;
+  list.appendChild(row);
+}
+
+function savePlayers() {
+  const names = [...document.querySelectorAll('.player-name-input')]
+    .map(i => i.value.trim()).filter(Boolean);
+  state.players = names;
+  localStorage.setItem('survivor_players', JSON.stringify(names));
+  closeModal('settingsModal');
+  showToast('✅ Tribe members saved');
+  renderCurrentTab();
+}
+
+// ============================================================
+// MODALS
+// ============================================================
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) closeModal(overlay.id);
+  });
+});
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function initials(name) {
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function slugify(str) {
+  return String(str).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+}
+
+function escJs(str) {
+  return str.replace(/'/g, "\\'");
+}
+
+function extractNum(name) {
+  const match = name.match(/\d+/);
+  return match ? match[0] : null;
+}
+</script>
+</body>
+</html>
