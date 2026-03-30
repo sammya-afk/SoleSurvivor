@@ -383,6 +383,88 @@ body::before {
 .draft-prog-bar { width:100%; max-width:360px; height:3px; background:rgba(255,255,255,0.07); border-radius:2px; overflow:hidden; }
 .draft-prog-fill { height:100%; background:linear-gradient(90deg,var(--torch),var(--torch-glow)); border-radius:2px; width:0%; transition:width 0.5s cubic-bezier(0.16,1,0.3,1); }
 .draft-saving { display:none; flex-direction:column; align-items:center; gap:14px; color:var(--text2); font-family:'Cinzel',serif; font-size:14px; letter-spacing:2px; margin-top:20px; }
+/* SHARE BUTTON (post-draft) */
+.draft-share-wrap { display:none; flex-direction:column; align-items:center; gap:12px; margin-top:24px; width:100%; max-width:360px; }
+.draft-share-btn {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; padding:14px 20px; border-radius:var(--radius);
+  background:linear-gradient(135deg,var(--torch),var(--torch-dim));
+  color:white; border:none; font-family:'Cinzel',serif; font-size:13px;
+  font-weight:700; letter-spacing:1.5px; cursor:pointer; text-transform:uppercase;
+  box-shadow:0 4px 18px rgba(255,107,26,0.3);
+  transition:transform 0.1s, box-shadow 0.15s;
+}
+.draft-share-btn:active { transform:scale(0.97); box-shadow:0 2px 8px rgba(255,107,26,0.15); }
+.draft-close-btn {
+  display:flex; align-items:center; justify-content:center;
+  width:100%; padding:12px; border-radius:var(--radius);
+  background:rgba(255,255,255,0.05); border:1px solid var(--border2);
+  color:var(--text2); font-family:'Cinzel',serif; font-size:12px;
+  letter-spacing:1px; cursor:pointer; text-transform:uppercase;
+  transition:background 0.15s;
+}
+.draft-close-btn:active { background:rgba(255,255,255,0.1); }
+/* REPLAY SCREENS */
+#replayOverlay {
+  position:fixed; inset:0; z-index:350; background:#080f08;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:24px; opacity:0; pointer-events:none; transition:opacity 0.4s;
+  overflow-y:auto;
+}
+#replayOverlay.open { opacity:1; pointer-events:all; }
+/* title screen */
+.replay-title-screen { display:flex; flex-direction:column; align-items:center; text-align:center; }
+.replay-torch-big {
+  font-size:72px; margin-bottom:24px;
+  filter:drop-shadow(0 0 24px var(--torch));
+  animation:flicker 2.4s ease-in-out infinite alternate;
+}
+.replay-eyebrow { font-family:'Cinzel',serif; font-size:11px; letter-spacing:4px; color:var(--text3); text-transform:uppercase; margin-bottom:8px; }
+.replay-season-name { font-family:'Cinzel',serif; font-size:28px; font-weight:900; color:var(--sand); letter-spacing:1px; margin-bottom:8px; text-align:center; }
+.replay-tagline { font-size:13px; color:var(--text2); letter-spacing:1px; margin-bottom:40px; }
+.replay-play-btn {
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  padding:16px 40px; border-radius:50px;
+  background:linear-gradient(135deg,var(--torch),var(--torch-dim));
+  color:white; border:none; font-family:'Cinzel',serif; font-size:15px;
+  font-weight:700; letter-spacing:2px; cursor:pointer; text-transform:uppercase;
+  box-shadow:0 6px 28px rgba(255,107,26,0.4);
+  transition:transform 0.15s, box-shadow 0.15s;
+}
+.replay-play-btn:active { transform:scale(0.96); box-shadow:0 3px 12px rgba(255,107,26,0.2); }
+/* results screen */
+.replay-results { display:none; flex-direction:column; align-items:center; width:100%; max-width:400px; padding-bottom:40px; }
+.replay-results-title { font-family:'Cinzel',serif; font-size:18px; font-weight:700; color:var(--sand); letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; text-align:center; }
+.replay-results-season { font-family:'Cinzel',serif; font-size:13px; color:var(--text2); margin-bottom:24px; text-align:center; letter-spacing:1px; }
+.replay-team-card {
+  width:100%; background:rgba(255,255,255,0.04); border:1px solid var(--border);
+  border-radius:var(--radius); overflow:hidden; margin-bottom:10px;
+  animation:rowIn 0.4s cubic-bezier(0.16,1,0.3,1) both;
+}
+.replay-team-header {
+  display:flex; align-items:center; gap:12px; padding:12px 16px;
+  border-bottom:1px solid var(--border);
+}
+.replay-team-av { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Cinzel',serif; font-size:13px; font-weight:700; color:white; flex-shrink:0; border:2px solid rgba(255,255,255,0.15); }
+.replay-team-name { font-family:'Cinzel',serif; font-size:15px; font-weight:600; color:var(--sand); }
+.replay-team-count { margin-left:auto; font-size:11px; color:var(--text3); }
+.replay-team-members { padding:10px 16px; display:flex; flex-wrap:wrap; gap:6px; }
+.replay-member-pill {
+  font-size:12px; padding:4px 10px;
+  background:rgba(255,107,26,0.1); border:1px solid rgba(255,107,26,0.2);
+  border-radius:20px; color:var(--torch-glow);
+}
+.replay-home-btn {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; max-width:400px; padding:15px; border-radius:var(--radius);
+  background:linear-gradient(135deg,var(--torch),var(--torch-dim));
+  color:white; border:none; font-family:'Cinzel',serif; font-size:13px;
+  font-weight:700; letter-spacing:1.5px; cursor:pointer; text-transform:uppercase;
+  box-shadow:0 4px 18px rgba(255,107,26,0.28); margin-top:8px;
+  text-decoration:none; display:flex;
+  transition:transform 0.1s;
+}
+.replay-home-btn:active { transform:scale(0.97); }
 /* EMPTY */
 .empty { text-align:center; padding:64px 20px; }
 .empty-icon { font-size:52px; display:block; margin-bottom:14px; opacity:0.5; }
@@ -579,7 +661,7 @@ body::before {
 
 <!-- DRAFT OVERLAY -->
 <div id="draftOverlay">
-  <button class="draft-skip-btn" onclick="skipDraft()">Skip →</button>
+  <button class="draft-skip-btn" id="draftSkipBtn" onclick="skipDraft()">Skip →</button>
   <div class="draft-eyebrow">The Tribes Have Been Drawn</div>
   <div class="draft-season-title" id="draftTitle"></div>
   <div class="draft-name-stage">
@@ -592,6 +674,29 @@ body::before {
   <div class="draft-saving" id="draftSaving">
     <div class="spinner"></div>
     <span>Lighting the torches...</span>
+  </div>
+  <div class="draft-share-wrap" id="draftShareWrap">
+    <button class="draft-share-btn" onclick="shareDraftReplay()">🔗 Share Draft Replay</button>
+    <button class="draft-close-btn" onclick="closeDraftOverlay()">Enter the Game →</button>
+  </div>
+</div>
+
+<!-- REPLAY OVERLAY -->
+<div id="replayOverlay">
+  <!-- Title Screen -->
+  <div class="replay-title-screen" id="replayTitleScreen">
+    <div class="replay-torch-big">🔥</div>
+    <div class="replay-eyebrow">Survivor · Tribe Tracker</div>
+    <div class="replay-season-name" id="replayTitleName"></div>
+    <div class="replay-tagline">The tribes have been drawn…</div>
+    <button class="replay-play-btn" onclick="startReplayAnimation()">▶ Watch the Draft</button>
+  </div>
+  <!-- Results Screen -->
+  <div class="replay-results" id="replayResultsScreen">
+    <div class="replay-results-title">The Tribes</div>
+    <div class="replay-results-season" id="replayResultsSeason"></div>
+    <div id="replayTeamsGrid"></div>
+    <a class="replay-home-btn" id="replayHomeBtn" href="#">🏝️ View Live Tracker</a>
   </div>
 </div>
 
@@ -613,7 +718,9 @@ let draft = { assignments:[], flatPicks:[], pickIndex:0, seasonName:'', timer:nu
 
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('scriptUrlInput').value = getScriptUrl();
-  loadData();
+  if (!checkReplayMode()) {
+    loadData();
+  }
 });
 
 function getScriptUrl() {
@@ -879,7 +986,11 @@ function openDraftOverlay() {
 
 function runDraftStep() {
   const { flatPicks, pickIndex } = draft;
-  if (pickIndex >= flatPicks.length) { finishDraft(); return; }
+  if (pickIndex >= flatPicks.length) {
+    if (draft.isReplay) { showReplayResults(); }
+    else { finishDraft(); }
+    return;
+  }
 
   const pick = flatPicks[pickIndex];
   document.getElementById('draftProgFill').style.width = `${(pickIndex/flatPicks.length)*100}%`;
@@ -913,26 +1024,34 @@ async function finishDraft() {
   document.getElementById('draftProgFill').style.width='100%';
   document.getElementById('draftNameEl').classList.remove('show');
   document.querySelectorAll('.dtr').forEach(r=>r.classList.remove('lit'));
+  document.getElementById('draftSkipBtn').style.display='none';
   document.getElementById('draftSaving').style.display='flex';
   try {
     await fetch(getScriptUrl(), {
       method:'POST',
       body: JSON.stringify({ action:'startSeason', seasonName:draft.seasonName, assignments:draft.assignments })
     });
-    document.getElementById('draftOverlay').classList.remove('open');
-    showToast('🔥 Season started!');
+    document.getElementById('draftSaving').style.display='none';
+    // Show share buttons
+    document.getElementById('draftShareWrap').style.display='flex';
     await loadData();
-    switchTab('current');
   } catch(e) {
     showToast('⚠️ Error saving season');
     document.getElementById('draftSaving').style.display='none';
+    document.getElementById('draftSkipBtn').style.display='block';
   }
+}
+
+function closeDraftOverlay() {
+  document.getElementById('draftOverlay').classList.remove('open');
+  document.getElementById('draftShareWrap').style.display='none';
+  document.getElementById('draftSkipBtn').style.display='block';
+  switchTab('current');
 }
 
 function skipDraft() {
   if (draft.timer) clearTimeout(draft.timer);
   draft.timer = null;
-  // Fill all picks instantly
   draft.flatPicks.forEach(pick => {
     const picksEl = document.getElementById(`dtpicks-${pick.playerIndex}`);
     if (picksEl && !picksEl.querySelector(`[data-n="${pick.contestantName}"]`)) {
@@ -946,7 +1065,129 @@ function skipDraft() {
   document.getElementById('draftProgFill').style.width='100%';
   document.getElementById('draftNameEl').classList.remove('show');
   draft.pickIndex = draft.flatPicks.length;
-  finishDraft();
+  if (draft.isReplay) { showReplayResults(); }
+  else { finishDraft(); }
+}
+
+// ── REPLAY SHARE ──
+function buildReplayUrl() {
+  const payload = {
+    s: draft.seasonName,
+    p: draft.assignments.map(a => a.player),
+    picks: draft.flatPicks.map(f => ({ c: f.contestantName, pi: f.playerIndex }))
+  };
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const base = window.location.origin + window.location.pathname;
+  return `${base}?replay=${encoded}`;
+}
+
+function shareDraftReplay() {
+  const url = buildReplayUrl();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(() => showToast('🔗 Replay link copied!'));
+  } else {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = url; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('🔗 Replay link copied!');
+  }
+}
+
+// ── REPLAY MODE ──
+let replayData = null;
+
+function checkReplayMode() {
+  const params = new URLSearchParams(window.location.search);
+  const encoded = params.get('replay');
+  if (!encoded) return false;
+  try {
+    const payload = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+    replayData = payload;
+    launchReplayTitleScreen();
+    return true;
+  } catch(e) {
+    console.warn('Invalid replay param', e);
+    return false;
+  }
+}
+
+function launchReplayTitleScreen() {
+  // Hide main app UI
+  document.querySelector('.app-header').style.display='none';
+  document.querySelector('.bottom-tabs').style.display='none';
+  document.querySelector('.scroll-area').style.display='none';
+
+  // Set home button URL (strip query params)
+  document.getElementById('replayHomeBtn').href = window.location.origin + window.location.pathname;
+
+  // Title screen
+  document.getElementById('replayTitleName').textContent = replayData.s;
+  document.getElementById('replayOverlay').classList.add('open');
+  document.getElementById('replayTitleScreen').style.display='flex';
+  document.getElementById('replayResultsScreen').style.display='none';
+}
+
+function startReplayAnimation() {
+  // Transition from title screen to draft animation
+  document.getElementById('replayTitleScreen').style.display='none';
+  document.getElementById('replayOverlay').classList.remove('open');
+
+  // Set up draft state from replay data
+  const players = replayData.p;
+  const assignments = players.map(p => ({ player: p, contestants: [] }));
+  const flatPicks = replayData.picks.map(f => ({ contestantName: f.c, playerIndex: f.pi }));
+  flatPicks.forEach(pick => assignments[pick.playerIndex].contestants.push(pick.contestantName));
+
+  draft = { assignments, flatPicks, pickIndex: 0, seasonName: replayData.s, timer: null, isReplay: true };
+
+  // Open draft overlay in replay mode
+  document.getElementById('draftTitle').textContent = draft.seasonName;
+  document.getElementById('draftSaving').style.display='none';
+  document.getElementById('draftShareWrap').style.display='none';
+  document.getElementById('draftProgFill').style.width='0%';
+  document.getElementById('draftSkipBtn').style.display='block';
+
+  const teamsEl = document.getElementById('draftTeamsEl');
+  teamsEl.innerHTML = draft.assignments.map((a,i)=>`
+    <div class="dtr" id="dtr-${i}">
+      <div class="dtr-torch">🔥</div>
+      <div class="dtr-av ${AV[i%6]}">${initials(a.player)}</div>
+      <div class="dtr-name">${a.player}</div>
+      <div class="dtr-picks" id="dtpicks-${i}"></div>
+    </div>`).join('');
+
+  document.getElementById('draftOverlay').classList.add('open');
+  setTimeout(()=>runDraftStep(), 700);
+}
+
+function showReplayResults() {
+  // Build results grid
+  const grid = document.getElementById('replayTeamsGrid');
+  grid.innerHTML = '';
+  draft.assignments.forEach((a, i) => {
+    const card = document.createElement('div');
+    card.className = 'replay-team-card';
+    card.style.animationDelay = `${i * 80}ms`;
+    card.innerHTML = `
+      <div class="replay-team-header">
+        <div class="replay-team-av ${AV[i%6]}">${initials(a.player)}</div>
+        <div class="replay-team-name">${a.player}</div>
+        <div class="replay-team-count">${a.contestants.length} contestants</div>
+      </div>
+      <div class="replay-team-members">
+        ${a.contestants.map(c=>`<div class="replay-member-pill">🔥 ${c}</div>`).join('')}
+      </div>`;
+    grid.appendChild(card);
+  });
+
+  document.getElementById('replayResultsSeason').textContent = draft.seasonName;
+  document.getElementById('draftOverlay').classList.remove('open');
+
+  const resultsEl = document.getElementById('replayResultsScreen');
+  resultsEl.style.display='flex';
+  document.getElementById('replayOverlay').classList.add('open');
+  document.getElementById('replayOverlay').scrollTo({ top:0 });
 }
 
 // ── ELIMINATION ──
