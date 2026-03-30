@@ -380,6 +380,15 @@ body::before {
   cursor:pointer; transition:background 0.15s;
 }
 .draft-skip-btn:active { background:rgba(255,255,255,0.12); }
+.draft-mute-btn {
+  position:absolute; top:calc(env(safe-area-inset-top,14px) + 16px); left:20px;
+  padding:7px 12px; background:rgba(255,255,255,0.07);
+  border:1px solid var(--border2); border-radius:20px;
+  color:var(--text2); font-size:16px; font-family:'Inter',sans-serif;
+  cursor:pointer; transition:background 0.15s;
+  line-height:1;
+}
+.draft-mute-btn:active { background:rgba(255,255,255,0.12); }
 .draft-prog-bar { width:100%; max-width:360px; height:3px; background:rgba(255,255,255,0.07); border-radius:2px; overflow:hidden; }
 .draft-prog-fill { height:100%; background:linear-gradient(90deg,var(--torch),var(--torch-glow)); border-radius:2px; width:0%; transition:width 0.5s cubic-bezier(0.16,1,0.3,1); }
 .draft-saving { display:none; flex-direction:column; align-items:center; gap:14px; color:var(--text2); font-family:'Cinzel',serif; font-size:14px; letter-spacing:2px; margin-top:20px; }
@@ -637,30 +646,6 @@ body::before {
     </div>
   </div>
 
-  <!-- MANAGE -->
-  <div class="page" id="page-manage">
-    <div class="page-inner">
-      <div class="page-spacer"></div>
-      <div class="section-label" style="margin-top:8px;">🔥 Season Controls</div>
-      <button class="btn btn-primary" onclick="openNewSeasonModal()">🏝️ Start New Season &amp; Draft</button>
-      <div id="endSeasonWrap" style="display:none;margin-top:10px;">
-        <button class="btn btn-danger" onclick="openEndSeasonModal()">🏆 End Season &amp; Crown Winner</button>
-      </div>
-      <div class="divider"></div>
-      <div class="advanced-toggle" onclick="toggleAdvanced()">
-        <span>Advanced</span>
-        <span class="advanced-chevron" id="advancedChevron">›</span>
-      </div>
-      <div id="advancedPanel" style="display:none;margin-top:14px;">
-        <div class="section-label">🌴 Apps Script URL</div>
-        <div class="form-group">
-          <input type="text" class="form-input" id="scriptUrlInput" placeholder="Paste your Apps Script URL" style="font-size:12px;">
-        </div>
-        <button class="btn btn-secondary" onclick="saveScriptUrl()">Save URL</button>
-      </div>
-    </div>
-  </div>
-
 </div>
 
 <!-- BOTTOM TABS -->
@@ -676,10 +661,6 @@ body::before {
   <div class="tab-item" id="tab-tribe" onclick="switchTab('tribe')">
     <div class="tab-icon">🌴</div>
     <div class="tab-label">Tribe</div>
-  </div>
-  <div class="tab-item" id="tab-manage" onclick="switchTab('manage')">
-    <div class="tab-icon">⚔️</div>
-    <div class="tab-label">Manage</div>
   </div>
 </nav>
 
@@ -738,13 +719,44 @@ body::before {
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">⚙️ Settings</div>
-    <div class="sheet-sub">Manage your tribe members</div>
+
+    <div class="section-label" style="margin-top:4px;">🔥 Season</div>
+    <button class="btn btn-primary" onclick="closeModal('settingsModal'); openNewSeasonModal();">🏝️ Start New Season &amp; Draft</button>
+    <div id="endSeasonWrap" style="display:none; margin-top:10px;">
+      <button class="btn btn-danger" onclick="closeModal('settingsModal'); openEndSeasonModal();">🏆 End Season &amp; Crown Winner</button>
+    </div>
+
+    <div class="divider"></div>
+
     <div class="section-label">🌴 Tribe Members</div>
-    <div id="psListEl"></div>
-    <button class="add-row-btn" onclick="addPlayerRow()" style="margin-top:6px;">+ Add Member</button>
+    <div class="advanced-toggle" onclick="toggleTribeMembers()" style="margin-bottom:0;">
+      <span>Manage Tribe Members</span>
+      <span class="advanced-chevron" id="tribeMembersChevron">›</span>
+    </div>
+    <div id="tribeMembersPanel" style="display:none; margin-top:14px;">
+      <div id="psListEl"></div>
+      <button class="add-row-btn" onclick="addPlayerRow()" style="margin-top:6px;">+ Add Member</button>
+      <div style="margin-top:16px;">
+        <button class="btn btn-secondary" onclick="savePlayers()">Save Members</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="advanced-toggle" onclick="toggleAdvanced()">
+      <span>Advanced</span>
+      <span class="advanced-chevron" id="advancedChevron">›</span>
+    </div>
+    <div id="advancedPanel" style="display:none; margin-top:14px;">
+      <div class="section-label">🌴 Apps Script URL</div>
+      <div class="form-group">
+        <input type="text" class="form-input" id="scriptUrlInput" placeholder="Paste your Apps Script URL" style="font-size:12px;">
+      </div>
+      <button class="btn btn-secondary" onclick="saveScriptUrl()">Save URL</button>
+    </div>
+
     <div style="margin-top:24px;">
-      <button class="btn btn-primary" onclick="savePlayers()">Save Members</button>
-      <button class="btn btn-secondary" onclick="closeModal('settingsModal')" style="margin-top:10px;">Cancel</button>
+      <button class="btn btn-secondary" onclick="closeModal('settingsModal')">Close</button>
     </div>
   </div>
 </div>
@@ -752,6 +764,7 @@ body::before {
 <!-- DRAFT OVERLAY -->
 <div id="draftOverlay">
   <button class="draft-skip-btn" id="draftSkipBtn" onclick="skipDraft()">Skip →</button>
+  <button class="draft-mute-btn" id="draftMuteBtn" onclick="toggleMute()" style="display:none;">🔊</button>
   <div class="draft-eyebrow">The Tribes Have Been Drawn</div>
   <div class="draft-season-title" id="draftTitle"></div>
   <div class="draft-name-stage">
@@ -836,7 +849,8 @@ function renderAll() {
   const txt = document.getElementById('seasonPillText');
   if (state.currentSeason) { pill.style.display='flex'; txt.textContent=state.currentSeason.name; }
   else pill.style.display='none';
-  document.getElementById('endSeasonWrap').style.display = state.currentSeason ? 'block' : 'none';
+  const esw = document.getElementById('endSeasonWrap');
+  if (esw) esw.style.display = state.currentSeason ? 'block' : 'none';
 }
 
 // ── TAB SWITCHING ──
@@ -884,7 +898,7 @@ function renderCurrent() {
   const el = document.getElementById('currentContent');
   if (!state.loaded) { el.innerHTML='<div class="loading"><div class="spinner"></div></div>'; return; }
   if (!state.currentSeason) {
-    el.innerHTML=`<div class="empty"><span class="empty-icon">🔥</span><h2>No Active Season</h2><p>Head to Manage to start a new season and draft your tribes.</p><button class="btn btn-primary" onclick="switchTab('manage')">🏝️ Start a Season</button></div>`;
+    el.innerHTML=`<div class="empty"><span class="empty-icon">🔥</span><h2>No Active Season</h2><p>Tap the ⚙️ gear to start a new season and draft your tribes.</p><button class="btn btn-primary" onclick="openSettings()">⚙️ Open Settings</button></div>`;
     return;
   }
   const s = state.currentSeason;
@@ -1099,7 +1113,8 @@ function openDraftOverlay() {
     </div>`).join('');
 
   document.getElementById('draftOverlay').classList.add('open');
-  setTimeout(()=>runDraftStep(), 700);
+  document.getElementById('draftMuteBtn').style.display = 'block';
+  setTimeout(()=>{ startDraftMusic(draft.flatPicks.length); runDraftStep(); }, 700);
 }
 
 function runDraftStep() {
@@ -1126,6 +1141,7 @@ function runDraftStep() {
   // After pause, light team & add pill
   setTimeout(()=>{
     document.getElementById(`dtr-${pick.playerIndex}`)?.classList.add('lit');
+    onPickReveal(); // 🔥 torch hit sound
     const picksEl = document.getElementById(`dtpicks-${pick.playerIndex}`);
     if (picksEl) {
       const pill = document.createElement('div');
@@ -1144,13 +1160,13 @@ async function finishDraft() {
   document.querySelectorAll('.dtr').forEach(r=>r.classList.remove('lit'));
   document.getElementById('draftSkipBtn').style.display='none';
   document.getElementById('draftSaving').style.display='flex';
+  onDraftComplete(); // 🎺 finale swell
   try {
     await fetch(getScriptUrl(), {
       method:'POST',
       body: JSON.stringify({ action:'startSeason', seasonName:draft.seasonName, assignments:draft.assignments })
     });
     document.getElementById('draftSaving').style.display='none';
-    // Show share buttons
     document.getElementById('draftShareWrap').style.display='flex';
     await loadData();
   } catch(e) {
@@ -1161,15 +1177,22 @@ async function finishDraft() {
 }
 
 function closeDraftOverlay() {
+  stopDraftMusic();
   document.getElementById('draftOverlay').classList.remove('open');
   document.getElementById('draftShareWrap').style.display='none';
   document.getElementById('draftSkipBtn').style.display='block';
+  document.getElementById('draftMuteBtn').style.display='none';
+  musicMuted = false;
+  document.getElementById('draftMuteBtn').textContent='🔊';
   switchTab('current');
 }
 
 function skipDraft() {
   if (draft.timer) clearTimeout(draft.timer);
   draft.timer = null;
+  // Stop scheduler but let current sound tail off
+  if (schedulerTimer) { clearTimeout(schedulerTimer); schedulerTimer = null; }
+  if (masterGain) masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.4);
   draft.flatPicks.forEach(pick => {
     const picksEl = document.getElementById(`dtpicks-${pick.playerIndex}`);
     if (picksEl && !picksEl.querySelector(`[data-n="${pick.contestantName}"]`)) {
@@ -1357,14 +1380,16 @@ async function confirmEndSeason() {
 
 // ── SETTINGS ──
 function openSettings() {
-  const list=document.getElementById('psListEl'); list.innerHTML='';
-  state.players.forEach((p,i)=>{
-    const row=document.createElement('div'); row.className='ps-row';
-    row.innerHTML=`<div class="ps-av ${AV[i%6]}">${initials(p)}</div>
-      <input type="text" class="form-input player-name-inp" value="${p}" style="font-size:14px;padding:11px 14px;">
-      <button class="rm-btn" onclick="this.parentElement.remove()">×</button>`;
-    list.appendChild(row);
-  });
+  // Reset collapsibles
+  document.getElementById('tribeMembersPanel').style.display = 'none';
+  document.getElementById('tribeMembersChevron').classList.remove('open');
+  document.getElementById('advancedPanel').style.display = 'none';
+  document.getElementById('advancedChevron').classList.remove('open');
+  // Refresh end season button visibility
+  const esw = document.getElementById('endSeasonWrap');
+  if (esw) esw.style.display = state.currentSeason ? 'block' : 'none';
+  // Pre-fill script URL
+  document.getElementById('scriptUrlInput').value = getScriptUrl();
   openModal('settingsModal');
 }
 function addPlayerRow() {
@@ -1378,11 +1403,34 @@ function addPlayerRow() {
 function savePlayers() {
   const names=[...document.querySelectorAll('.player-name-inp')].map(i=>i.value.trim()).filter(Boolean);
   state.players=names; localStorage.setItem('sv_players',JSON.stringify(names));
-  closeModal('settingsModal'); showToast('✅ Tribe saved'); renderAll();
+  // Collapse tribe panel after saving
+  document.getElementById('tribeMembersPanel').style.display='none';
+  document.getElementById('tribeMembersChevron').classList.remove('open');
+  showToast('✅ Tribe saved'); renderAll();
 }
 function saveScriptUrl() {
   const url=document.getElementById('scriptUrlInput').value.trim();
   localStorage.setItem('sv_url',url); showToast('✅ URL saved'); loadData();
+}
+
+function toggleTribeMembers() {
+  const panel = document.getElementById('tribeMembersPanel');
+  const chevron = document.getElementById('tribeMembersChevron');
+  const isOpen = panel.style.display !== 'none';
+  if (!isOpen) {
+    // Populate list when opening
+    const list = document.getElementById('psListEl');
+    list.innerHTML = '';
+    state.players.forEach((p,i) => {
+      const row = document.createElement('div'); row.className='ps-row';
+      row.innerHTML=`<div class="ps-av ${AV[i%6]}">${initials(p)}</div>
+        <input type="text" class="form-input player-name-inp" value="${p}" style="font-size:14px;padding:11px 14px;">
+        <button class="rm-btn" onclick="this.parentElement.remove()">×</button>`;
+      list.appendChild(row);
+    });
+  }
+  panel.style.display = isOpen ? 'none' : 'block';
+  chevron.classList.toggle('open', !isOpen);
 }
 
 function toggleAdvanced() {
@@ -1406,8 +1454,245 @@ function showToast(msg) {
   setTimeout(()=>t.classList.remove('show'), 2800);
 }
 
-// ── HELPERS ──
-function shuffle(arr) {
+// ══════════════════════════════════════════════
+// DRAFT MUSIC ENGINE — Web Audio API
+// Orchestral + tribal: strings, brass stabs,
+// tribal drums, torch hit sfx
+// ══════════════════════════════════════════════
+let audioCtx = null;
+let masterGain = null;
+let musicMuted = false;
+let drumLoop = null;
+let stringLoop = null;
+let musicNodes = [];
+let musicStartTime = 0;
+let pickCount = 0;
+let totalPicks = 0;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+  masterGain.gain.linearRampToValueAtTime(0.85, audioCtx.currentTime + 2.5);
+  masterGain.connect(audioCtx.destination);
+}
+
+function toggleMute() {
+  musicMuted = !musicMuted;
+  document.getElementById('draftMuteBtn').textContent = musicMuted ? '🔇' : '🔊';
+  if (masterGain) {
+    masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+    masterGain.gain.setTargetAtTime(musicMuted ? 0 : 0.85, audioCtx.currentTime, 0.3);
+  }
+}
+
+// ── Helpers ──
+function makeOsc(type, freq, startTime, duration, gainVal, detune=0) {
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, startTime);
+  if (detune) osc.detune.setValueAtTime(detune, startTime);
+  osc.connect(g); g.connect(masterGain);
+  g.gain.setValueAtTime(0, startTime);
+  g.gain.linearRampToValueAtTime(gainVal, startTime + 0.04);
+  g.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  osc.start(startTime);
+  osc.stop(startTime + duration + 0.05);
+  musicNodes.push(osc, g);
+  return { osc, g };
+}
+
+function makeNoise(startTime, duration, gainVal, filterFreq=800) {
+  const bufSize = audioCtx.sampleRate * Math.min(duration, 2);
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(filterFreq, startTime);
+  const g = audioCtx.createGain();
+  src.connect(filter); filter.connect(g); g.connect(masterGain);
+  g.gain.setValueAtTime(gainVal, startTime);
+  g.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  src.start(startTime);
+  src.stop(startTime + duration + 0.05);
+  musicNodes.push(src, g);
+}
+
+// ── Deep tribal drum hit ──
+function drumHit(t, vel=0.7) {
+  // Body — low sine boom
+  const body = audioCtx.createOscillator();
+  const bodyG = audioCtx.createGain();
+  body.type = 'sine';
+  body.frequency.setValueAtTime(80, t);
+  body.frequency.exponentialRampToValueAtTime(30, t + 0.18);
+  bodyG.gain.setValueAtTime(vel, t);
+  bodyG.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+  body.connect(bodyG); bodyG.connect(masterGain);
+  body.start(t); body.stop(t + 0.4);
+  musicNodes.push(body, bodyG);
+  // Snap — noise transient
+  makeNoise(t, 0.06, vel * 0.5, 1200);
+}
+
+// ── Small accent drum ──
+function accentHit(t, vel=0.35) {
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = 'triangle';
+  o.frequency.setValueAtTime(200, t);
+  o.frequency.exponentialRampToValueAtTime(80, t + 0.1);
+  g.gain.setValueAtTime(vel, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+  o.connect(g); g.connect(masterGain);
+  o.start(t); o.stop(t + 0.22);
+  musicNodes.push(o, g);
+  makeNoise(t, 0.04, vel * 0.3, 2000);
+}
+
+// ── Sustained string chord ──
+// chord = array of [freq, gain] pairs
+function stringChord(chord, startTime, duration) {
+  chord.forEach(([freq, vel]) => {
+    // Layer 2 slightly detuned oscs for richness
+    makeOsc('sawtooth', freq, startTime, duration, vel * 0.18, -8);
+    makeOsc('sawtooth', freq, startTime, duration, vel * 0.18, +8);
+    makeOsc('triangle', freq, startTime, duration, vel * 0.12, 0);
+  });
+}
+
+// ── Brass stab ──
+function brassStab(freq, t, dur=0.5) {
+  makeOsc('sawtooth', freq,       t, dur, 0.22, 0);
+  makeOsc('sawtooth', freq * 2,   t, dur, 0.10, 5);
+  makeOsc('square',   freq * 0.5, t, dur, 0.08, -3);
+}
+
+// ── Torch reveal hit — dramatic orchestral stab ──
+function torchHit(t) {
+  // Big drum
+  drumHit(t, 0.9);
+  // Brass chord sting
+  brassStab(220, t, 0.6);   // A3
+  brassStab(277, t, 0.6);   // C#4
+  brassStab(330, t, 0.6);   // E4
+  // Shimmer noise
+  makeNoise(t, 0.08, 0.25, 4000);
+}
+
+// ── Crescendo finale ──
+function playFinale(t) {
+  // Big drum roll
+  for (let i = 0; i < 8; i++) {
+    drumHit(t + i * 0.12, 0.4 + i * 0.07);
+  }
+  // Full brass swell
+  const chord = [[130.8, 1],[164.8, 0.9],[196, 0.9],[261.6, 0.8],[329.6, 0.7]];
+  stringChord(chord, t + 0.7, 3.5);
+  [130.8, 164.8, 196, 261.6, 329.6].forEach((f, i) => {
+    brassStab(f, t + 0.7 + i * 0.07, 2.5);
+  });
+  // Fade master out
+  masterGain.gain.setTargetAtTime(0, t + 3.5, 1.2);
+}
+
+// ── Chord progression (minor, dramatic) ──
+// Am - F - C - G - Am - Dm - E - Am
+const CHORD_PROG = [
+  [[220,1],[261.6,0.85],[329.6,0.8]],          // Am
+  [[174.6,1],[220,0.85],[261.6,0.8]],           // F
+  [[261.6,1],[329.6,0.85],[392,0.8]],           // C
+  [[196,1],[246.9,0.85],[293.7,0.8]],           // G
+  [[220,1],[261.6,0.85],[329.6,0.8]],           // Am
+  [[146.8,1],[174.6,0.85],[220,0.8]],           // Dm
+  [[164.8,1],[207.7,0.85],[246.9,0.8]],         // E (V of Am — tension)
+  [[220,1],[261.6,0.85],[329.6,0.8],[440,0.5]], // Am octave — resolution
+];
+
+// ── Drum pattern (repeating 4-beat) ──
+// beats: [time_offset, velocity, isAccent]
+const DRUM_PATTERN = [
+  [0,     0.75, false],
+  [0.5,   0.30, true],
+  [1.0,   0.55, false],
+  [1.25,  0.28, true],
+  [1.5,   0.65, false],
+  [2.0,   0.35, true],
+  [2.5,   0.50, false],
+  [3.0,   0.75, false],
+  [3.5,   0.30, true],
+];
+const BEAT_DURATION = 4.0; // seconds per bar
+
+function scheduleDrumBar(barStartTime) {
+  DRUM_PATTERN.forEach(([offset, vel, isAccent]) => {
+    const t = barStartTime + offset;
+    if (isAccent) accentHit(t, vel);
+    else drumHit(t, vel);
+  });
+}
+
+function scheduleStringBar(barIndex, barStartTime) {
+  const chord = CHORD_PROG[barIndex % CHORD_PROG.length];
+  stringChord(chord, barStartTime, BEAT_DURATION + 0.3);
+  // Add bass note
+  makeOsc('sine', chord[0][0] * 0.5, barStartTime, BEAT_DURATION, 0.25, 0);
+}
+
+// Lookahead scheduler
+let schedulerTimer = null;
+let currentBar = 0;
+let nextBarTime = 0;
+
+function scheduleMusic() {
+  const lookahead = 0.3;
+  while (nextBarTime < audioCtx.currentTime + lookahead) {
+    scheduleDrumBar(nextBarTime);
+    scheduleStringBar(currentBar, nextBarTime);
+    currentBar++;
+    nextBarTime += BEAT_DURATION;
+  }
+  schedulerTimer = setTimeout(scheduleMusic, 100);
+}
+
+function startDraftMusic(numPicks) {
+  totalPicks = numPicks;
+  pickCount = 0;
+  initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  // Clear old nodes
+  stopDraftMusic();
+  musicNodes = [];
+  currentBar = 0;
+  nextBarTime = audioCtx.currentTime + 0.3;
+  scheduleMusic();
+  musicStartTime = audioCtx.currentTime;
+}
+
+function stopDraftMusic() {
+  if (schedulerTimer) { clearTimeout(schedulerTimer); schedulerTimer = null; }
+  musicNodes.forEach(n => { try { n.stop ? n.stop() : n.disconnect(); } catch(e){} });
+  musicNodes = [];
+}
+
+function onPickReveal() {
+  // Called when torch lights up — play stab
+  if (!audioCtx || musicMuted) return;
+  pickCount++;
+  torchHit(audioCtx.currentTime + 0.05);
+}
+
+function onDraftComplete() {
+  if (!audioCtx) return;
+  if (schedulerTimer) { clearTimeout(schedulerTimer); schedulerTimer = null; }
+  playFinale(audioCtx.currentTime + 0.1);
+}
+
   for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
   return arr;
 }
