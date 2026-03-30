@@ -496,6 +496,90 @@ body::before {
 /* player bar colors */
 .pc0{background:#e05c5c} .pc1{background:#4a9edd} .pc2{background:#4cb86a}
 .pc3{background:#a76fd4} .pc4{background:#e0973a} .pc5{background:#3ab8b0}
+/* ADVANCED TOGGLE */
+.advanced-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 16px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); cursor: pointer;
+  font-size: 13px; color: var(--text2); font-weight: 500;
+  transition: background 0.15s;
+}
+.advanced-toggle:active { background: var(--surface2); }
+.advanced-chevron {
+  font-size: 18px; color: var(--text3);
+  transition: transform 0.25s cubic-bezier(0.16,1,0.3,1);
+  display: inline-block;
+}
+.advanced-chevron.open { transform: rotate(90deg); }
+
+/* WINNER CELEBRATION */
+.winner-banner {
+  text-align: center;
+  padding: 32px 20px 24px;
+  animation: rowIn 0.5s cubic-bezier(0.16,1,0.3,1) both;
+}
+.winner-confetti {
+  font-size: 56px;
+  display: block;
+  margin-bottom: 4px;
+  animation: confettiBounce 1.2s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes confettiBounce {
+  0% { transform: scale(0) rotate(-10deg); opacity: 0; }
+  60% { transform: scale(1.15) rotate(4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.winner-trophy {
+  font-size: 80px;
+  display: block;
+  margin: 0 auto 16px;
+  filter: drop-shadow(0 0 28px rgba(255,215,0,0.6));
+  animation: trophyPulse 2s ease-in-out infinite alternate;
+}
+@keyframes trophyPulse {
+  0% { filter: drop-shadow(0 0 16px rgba(255,215,0,0.4)); transform: scale(1); }
+  100% { filter: drop-shadow(0 0 36px rgba(255,215,0,0.8)); transform: scale(1.06); }
+}
+.winner-label {
+  font-family: 'Cinzel', serif;
+  font-size: 11px; letter-spacing: 4px; text-transform: uppercase;
+  color: var(--text2); margin-bottom: 6px;
+}
+.winner-player-name {
+  font-family: 'Cinzel', serif;
+  font-size: 32px; font-weight: 900;
+  color: gold;
+  text-shadow: 0 0 32px rgba(255,215,0,0.6);
+  margin-bottom: 4px;
+  animation: goldShimmer 2.5s ease-in-out infinite alternate;
+}
+@keyframes goldShimmer {
+  0% { text-shadow: 0 0 20px rgba(255,215,0,0.5); }
+  100% { text-shadow: 0 0 40px rgba(255,215,0,0.9), 0 0 60px rgba(255,165,0,0.4); }
+}
+.winner-contestant-name {
+  font-size: 16px; color: var(--sand);
+  margin-bottom: 6px; font-weight: 500;
+}
+.winner-survivor-label {
+  font-family: 'Cinzel', serif;
+  font-size: 12px; letter-spacing: 2px;
+  color: var(--torch-glow); text-transform: uppercase;
+  margin-bottom: 28px;
+}
+.winner-end-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 14px 28px; border-radius: var(--radius);
+  background: linear-gradient(135deg, #c8961a, #8a6200);
+  color: white; border: none; font-family: 'Cinzel', serif;
+  font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
+  cursor: pointer; text-transform: uppercase;
+  box-shadow: 0 4px 20px rgba(200,150,26,0.35);
+  transition: transform 0.1s;
+}
+.winner-end-btn:active { transform: scale(0.97); }
+.winner-still-in { margin-top: 24px; width: 100%; }
 ::-webkit-scrollbar{width:3px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
 </style>
 </head>
@@ -563,11 +647,17 @@ body::before {
         <button class="btn btn-danger" onclick="openEndSeasonModal()">🏆 End Season &amp; Crown Winner</button>
       </div>
       <div class="divider"></div>
-      <div class="section-label">🌴 Apps Script URL</div>
-      <div class="form-group">
-        <input type="text" class="form-input" id="scriptUrlInput" placeholder="Paste your Apps Script URL" style="font-size:12px;">
+      <div class="advanced-toggle" onclick="toggleAdvanced()">
+        <span>Advanced</span>
+        <span class="advanced-chevron" id="advancedChevron">›</span>
       </div>
-      <button class="btn btn-secondary" onclick="saveScriptUrl()">Save URL</button>
+      <div id="advancedPanel" style="display:none;margin-top:14px;">
+        <div class="section-label">🌴 Apps Script URL</div>
+        <div class="form-group">
+          <input type="text" class="form-input" id="scriptUrlInput" placeholder="Paste your Apps Script URL" style="font-size:12px;">
+        </div>
+        <button class="btn btn-secondary" onclick="saveScriptUrl()">Save URL</button>
+      </div>
     </div>
   </div>
 
@@ -804,6 +894,34 @@ function renderCurrent() {
   });
   const aliveAll = all.filter(c=>!c.eliminated);
   const elimAll  = all.filter(c=>c.eliminated);
+
+  // ── WINNER STATE: only 1 alive ──
+  if (aliveAll.length === 1) {
+    const winner = aliveAll[0];
+    el.innerHTML = `
+      <div class="winner-banner">
+        <span class="winner-confetti">🎉</span>
+        <span class="winner-trophy">🏆</span>
+        <div class="winner-label">The Sole Survivor</div>
+        <div class="winner-player-name">${winner.player}</div>
+        <div class="winner-contestant-name">${winner.name}</div>
+        <div class="winner-survivor-label">Last torch still burning</div>
+        <button class="winner-end-btn" onclick="openEndSeasonModal()">🏆 Crown the Winner &amp; End Season</button>
+      </div>
+      <div class="winner-still-in">
+        <div class="section-label">💨 The Fallen</div>
+        <div class="c-list">
+          ${elimAll.map((c,i)=>`
+            <div class="c-row eliminated" style="animation-delay:${i*20}ms">
+              <div class="c-bar pc${c.pi%6}"></div>
+              <span class="smoke-icon">${SMOKE_SVG}</span>
+              <div class="c-name">${c.name}</div>
+              <div class="c-player">${c.player}</div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+    return;
+  }
 
   // Apply player filter
   let filtered = playerFilter ? all.filter(c=>c.player===playerFilter) : all;
@@ -1265,6 +1383,14 @@ function savePlayers() {
 function saveScriptUrl() {
   const url=document.getElementById('scriptUrlInput').value.trim();
   localStorage.setItem('sv_url',url); showToast('✅ URL saved'); loadData();
+}
+
+function toggleAdvanced() {
+  const panel = document.getElementById('advancedPanel');
+  const chevron = document.getElementById('advancedChevron');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  chevron.classList.toggle('open', !isOpen);
 }
 
 // ── MODALS ──
