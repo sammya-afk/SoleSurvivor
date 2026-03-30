@@ -161,6 +161,18 @@ body::before {
 }
 .stat-num { font-family:'Cinzel',serif; font-size:26px; font-weight:700; color:var(--torch-glow); line-height:1; }
 .stat-label { font-size:11px; color:var(--text2); margin-top:3px; }
+/* FILTER PILLS */
+.filter-pills { display: flex; gap: 8px; margin-bottom: 14px; }
+.fpill {
+  flex: 1; padding: 8px 10px; border-radius: 20px;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text2); font-size: 12px; font-weight: 600;
+  cursor: pointer; text-align: center; font-family: 'Inter', sans-serif;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.fpill:active { transform: scale(0.95); }
+.fpill.active { background: rgba(255,107,26,0.15); border-color: var(--torch); color: var(--torch-glow); }
 /* LEGEND */
 .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .legend-item {
@@ -168,13 +180,18 @@ body::before {
   padding: 5px 10px;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 20px; font-size: 12px; color: var(--text2);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
 }
+.legend-item:active { transform: scale(0.95); }
+.legend-item.active { background: rgba(255,255,255,0.1); border-color: var(--border2); color: var(--text1); }
 .legend-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
 .alive-badge {
   background: rgba(255,107,26,0.15); border: 1px solid rgba(255,107,26,0.3);
   border-radius: 20px; padding: 2px 8px; font-size: 11px;
   color: var(--torch-glow); font-weight: 600; margin-left: 2px;
 }
+.flame-icon { display:inline-flex; align-items:center; flex-shrink:0; font-size:14px; filter:drop-shadow(0 0 4px var(--torch)); }
 /* CONTESTANT LIST */
 .c-list { display: flex; flex-direction: column; gap: 2px; }
 .c-row {
@@ -228,7 +245,7 @@ body::before {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); margin-bottom: 10px;
 }
-.h-num { font-family:'Cinzel',serif; font-size:30px; font-weight:900; color:var(--torch); line-height:1; min-width:32px; text-align:center; text-shadow:0 0 16px rgba(255,107,26,0.35); }
+.h-trophy { font-size: 28px; flex-shrink: 0; filter: drop-shadow(0 0 8px rgba(255,215,0,0.4)); }
 .h-det { flex:1; }
 .h-name { font-family:'Cinzel',serif; font-size:14px; color:var(--sand); margin-bottom:5px; }
 .h-winner { font-size:12px; color:var(--text2); }
@@ -610,6 +627,8 @@ async function loadData() {
     state.seasons = data.seasons || [];
     state.currentSeason = state.seasons.find(s => s.status === 'active') || null;
     state.loaded = true;
+    currentFilter = 'all';
+    playerFilter = null;
     renderAll();
   } catch(e) { renderError(); }
 }
@@ -636,6 +655,34 @@ function switchTab(name) {
 }
 
 // ── RENDER CURRENT ──
+// filter: 'all' | 'alive' | 'eliminated'
+// playerFilter: player name string or null
+let currentFilter = 'all';
+let playerFilter = null;
+
+const SMOKE_SVG = `<svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;">
+  <path d="M8 18 C8 18 5 15 5.5 12 C6 9 9 8 8.5 5 C8 2 6 1 6 1" stroke="#8a8080" stroke-width="1.5" stroke-linecap="round" fill="none">
+    <animate attributeName="d" dur="2.5s" repeatCount="indefinite"
+      values="M8 18 C8 18 5 15 5.5 12 C6 9 9 8 8.5 5 C8 2 6 1 6 1;
+              M8 18 C8 18 6 15 7 12 C8 9 6 8 7 5 C8 2 7 1 7 1;
+              M8 18 C8 18 10 15 9.5 12 C9 9 7 8 7.5 5 C8 2 9 1 9 1;
+              M8 18 C8 18 5 15 5.5 12 C6 9 9 8 8.5 5 C8 2 6 1 6 1"/>
+    <animate attributeName="opacity" dur="2.5s" repeatCount="indefinite" values="0.8;0.5;0.7;0.8"/>
+  </path>
+  <path d="M5 17 C5 17 3 14.5 3.5 12 C4 9.5 6 9 5.5 7" stroke="#6a6060" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.5">
+    <animate attributeName="d" dur="3s" repeatCount="indefinite"
+      values="M5 17 C5 17 3 14.5 3.5 12 C4 9.5 6 9 5.5 7;
+              M5 17 C5 17 4 14.5 5 12 C6 9.5 5 9 6 7;
+              M5 17 C5 17 3 14.5 3.5 12 C4 9.5 6 9 5.5 7"/>
+  </path>
+  <path d="M11 17 C11 17 13 14.5 12.5 12 C12 9.5 10 9 10.5 7" stroke="#6a6060" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.4">
+    <animate attributeName="d" dur="2s" repeatCount="indefinite"
+      values="M11 17 C11 17 13 14.5 12.5 12 C12 9.5 10 9 10.5 7;
+              M11 17 C11 17 12 14.5 11.5 12 C11 9.5 12 9 11.5 7;
+              M11 17 C11 17 13 14.5 12.5 12 C12 9.5 10 9 10.5 7"/>
+  </path>
+</svg>`;
+
 function renderCurrent() {
   const el = document.getElementById('currentContent');
   if (!state.loaded) { el.innerHTML='<div class="loading"><div class="spinner"></div></div>'; return; }
@@ -648,49 +695,88 @@ function renderCurrent() {
   state.players.forEach((player,pi) => {
     (s.teams[player]||[]).forEach(c => all.push({...c, player, pi}));
   });
-  const alive = all.filter(c=>!c.eliminated);
-  const elim = all.filter(c=>c.eliminated);
+  const aliveAll = all.filter(c=>!c.eliminated);
+  const elimAll  = all.filter(c=>c.eliminated);
+
+  // Apply player filter
+  let filtered = playerFilter ? all.filter(c=>c.player===playerFilter) : all;
+  const alive = filtered.filter(c=>!c.eliminated);
+  const elim  = filtered.filter(c=>c.eliminated);
+
+  // Decide what to show based on currentFilter
+  const showAlive = currentFilter === 'all' || currentFilter === 'alive';
+  const showElim  = currentFilter === 'all' || currentFilter === 'eliminated';
 
   let html = `<div class="stats-bar">
-    <div class="stat-card"><div class="stat-num">${alive.length}</div><div class="stat-label">Still In</div></div>
-    <div class="stat-card"><div class="stat-num">${elim.length}</div><div class="stat-label">Voted Out</div></div>
+    <div class="stat-card"><div class="stat-num">${aliveAll.length}</div><div class="stat-label">Still In</div></div>
+    <div class="stat-card"><div class="stat-num">${elimAll.length}</div><div class="stat-label">Voted Out</div></div>
     <div class="stat-card"><div class="stat-num">${all.length}</div><div class="stat-label">Total Cast</div></div>
-  </div><div class="legend">`;
+  </div>`;
 
+  // Filter pills
+  html += `<div class="filter-pills">
+    <div class="fpill ${currentFilter==='all'?'active':''}" onclick="setFilter('all')">🌿 All</div>
+    <div class="fpill ${currentFilter==='alive'?'active':''}" onclick="setFilter('alive')">🔥 Still In</div>
+    <div class="fpill ${currentFilter==='eliminated'?'active':''}" onclick="setFilter('eliminated')">💨 Voted Out</div>
+  </div>`;
+
+  // Legend (tappable)
+  html += '<div class="legend">';
   state.players.forEach((p,pi) => {
     const team = s.teams[p]||[];
     if (!team.length) return;
     const a = team.filter(c=>!c.eliminated).length;
-    html+=`<div class="legend-item"><div class="legend-dot" style="background:${PCOLORS[pi%6]}"></div>${p}<span class="alive-badge">${a}</span></div>`;
+    const isActive = playerFilter === p;
+    html+=`<div class="legend-item ${isActive?'active':''}" onclick="setPlayerFilter('${escJs(p)}')" style="${isActive?`border-color:${PCOLORS[pi%6]};background:${PCOLORS[pi%6]}22`:''}">
+      <div class="legend-dot" style="background:${PCOLORS[pi%6]}"></div>${p}<span class="alive-badge">${a}</span>
+    </div>`;
   });
   html += '</div>';
 
-  if (alive.length) {
+  // Alive section
+  if (showAlive && alive.length) {
     html += '<div class="section-label">🌴 Still In The Game</div><div class="c-list">';
     alive.forEach((c,i) => {
       html+=`<div class="c-row" style="animation-delay:${i*40}ms">
         <div class="c-bar pc${c.pi%6}"></div>
+        <span class="flame-icon">🔥</span>
         <div class="c-name">${c.name}</div>
         <div class="c-player">${c.player}</div>
-        <button class="elim-btn" onclick="promptEliminate('${s.id}','${escJs(c.name)}')">Eliminate</button>
+        <button class="elim-btn" onclick="promptEliminate('${s.id}','${escJs(c.name)}')">Snuff Torch</button>
       </div>`;
     });
     html += '</div>';
   }
 
-  if (elim.length) {
-    html += '<div class="section-label" style="margin-top:20px;">🔥 Voted Out</div><div class="c-list">';
+  // Eliminated section
+  if (showElim && elim.length) {
+    html += `<div class="section-label" style="margin-top:20px;">💨 Voted Out</div><div class="c-list">`;
     elim.forEach((c,i) => {
       html+=`<div class="c-row eliminated" style="animation-delay:${i*30}ms">
         <div class="c-bar pc${c.pi%6}"></div>
+        <span class="smoke-icon">${SMOKE_SVG}</span>
         <div class="c-name">${c.name}</div>
         <div class="c-player">${c.player}</div>
-        <div class="c-status">🔥</div>
       </div>`;
     });
     html += '</div>';
   }
+
+  if ((showAlive && !alive.length) && (showElim && !elim.length)) {
+    html += `<div style="text-align:center;padding:40px 20px;color:var(--text3);font-size:14px;">No contestants match this filter.</div>`;
+  }
+
   el.innerHTML = html;
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  renderCurrent();
+}
+
+function setPlayerFilter(player) {
+  playerFilter = (playerFilter === player) ? null : player;
+  renderCurrent();
 }
 
 // ── RENDER HISTORY ──
@@ -701,12 +787,12 @@ function renderHistory() {
     el.innerHTML=`<div class="empty"><span class="empty-icon">📜</span><p>No completed seasons yet.<br>Your history will be written here.</p></div>`;
     return;
   }
-  el.innerHTML = past.map((s,i) => `
+  el.innerHTML = past.map(s => `
     <div class="history-card">
-      <div class="h-num">${past.length-i}</div>
+      <div class="h-trophy">🏆</div>
       <div class="h-det">
         <div class="h-name">${s.name}</div>
-        <div class="h-winner">🏆 <strong>${s.winnerPlayer||'—'}</strong> · ${s.winnerContestant||'—'}</div>
+        <div class="h-winner"><strong>${s.winnerPlayer||'—'}</strong> · ${s.winnerContestant||'—'}</div>
       </div>
     </div>`).join('');
 }
