@@ -1033,9 +1033,17 @@ function renderCurrent() {
   const aliveAll = all.filter(c=>!c.eliminated);
   const elimAll  = all.filter(c=>c.eliminated);
 
-  // ── WINNER STATE: only 1 alive ──
+  // ── WINNER STATE: only 1 alive — auto-launch reveal ──
   if (aliveAll.length === 1) {
     const winner = aliveAll[0];
+    // Build data object for reveal
+    const revealData = {
+      s: s.name,
+      wp: winner.player,
+      wc: winner.name,
+      all: all.map(c=>({name:c.name,player:c.player,pi:c.pi,eliminated:!!c.eliminated}))
+    };
+    // Show a tap-to-watch banner instead of auto-launching (user must tap for audio)
     el.innerHTML = `
       <div class="winner-banner">
         <span class="winner-confetti">🎉</span>
@@ -1044,7 +1052,8 @@ function renderCurrent() {
         <div class="winner-player-name">${winner.player}</div>
         <div class="winner-contestant-name">${winner.name}</div>
         <div class="winner-survivor-label">Last torch still burning</div>
-        <button class="winner-end-btn" onclick="openEndSeasonModal()">🏆 Crown the Winner &amp; End Season</button>
+        <button class="winner-end-btn" onclick='launchWinnerReveal(${JSON.stringify(revealData).replace(/'/g,"&#39;")})' style="margin-bottom:12px;">🔥 Watch the Winner Reveal</button>
+        <button class="winner-end-btn" onclick="openEndSeasonModal()" style="background:linear-gradient(135deg,#c8961a,#8a6200);box-shadow:0 4px 20px rgba(200,150,26,0.35);">🏆 Crown Winner &amp; End Season</button>
       </div>
       <div class="winner-still-in">
         <div class="section-label">💨 The Fallen</div>
@@ -1537,6 +1546,9 @@ async function confirmEndSeason() {
 
     closeModal('endSeasonModal');
     await loadData();
+    // Build full cast for share link
+    const revealData = { s: seasonName, wp: selectedWinner.player, wc: selectedWinner.contestant, all: allContestants };
+    window._lastWinnerData = revealData;
     openWinnerShareSheet(seasonName, selectedWinner.player, selectedWinner.contestant, allContestants);
   } catch(e) {
     showToast('⚠️ Error: ' + e.message);
@@ -1544,9 +1556,16 @@ async function confirmEndSeason() {
 }
 
 function openWinnerShareSheet(seasonName, winnerPlayer, winnerContestant, allContestants) {
-  // Stash for share
   window._lastWinner = { seasonName, winnerPlayer, winnerContestant, allContestants };
+  window._lastWinnerData = { s:seasonName, wp:winnerPlayer, wc:winnerContestant, all:allContestants };
   openModal('winnerShareModal');
+}
+
+function doShareWinnerLink() {
+  const d = window._lastWinnerData || window._lastWinner;
+  if (!d) return;
+  const data = d.s ? d : { s:d.seasonName, wp:d.winnerPlayer, wc:d.winnerContestant, all:d.allContestants };
+  shareWinnerLink(data);
 }
 
 // ── SETTINGS ──
@@ -1637,490 +1656,423 @@ function showToast(msg) {
 }
 
 // ══════════════════════════════════════════════════════
-// SURVIVOR MUSIC ENGINE — Web Audio API
-// Opening theme DNA: tribal chanting, taiko drums,
-// orchestral strings. Used for both draft + winner reveal.
+// AUDIO ENGINE — simple, reliable Web Audio
 // ══════════════════════════════════════════════════════
-let audioCtx = null;
-let masterGain = null;
-let musicMuted = false;
-let musicNodes = [];
-let schedulerTimer = null;
-let currentBar = 0;
-let nextBarTime = 0;
-
-function initAudio() {
-  if (audioCtx) return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  masterGain = audioCtx.createGain();
-  masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
-  masterGain.connect(audioCtx.destination);
+let _ac = null;
+function ac() {
+  if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
+  if (_ac.state === 'suspended') _ac.resume();
+  return _ac;
 }
 
-function resumeAudio() {
-  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+function playDrum(t) {
+  const c = ac();
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(85, t);
+  o.frequency.exponentialRampToValueAtTime(28, t+0.22);
+  g.gain.setValueAtTime(0.9, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+0.5);
+  o.connect(g); g.connect(c.destination);
+  o.start(t); o.stop(t+0.55);
+  // Click transient
+  const o2 = c.createOscillator(), g2 = c.createGain();
+  o2.type = 'triangle'; o2.frequency.setValueAtTime(180, t);
+  g2.gain.setValueAtTime(0.3, t); g2.gain.exponentialRampToValueAtTime(0.0001, t+0.06);
+  o2.connect(g2); g2.connect(c.destination); o2.start(t); o2.stop(t+0.08);
 }
 
-function toggleMute() {
-  musicMuted = !musicMuted;
-  const btn = document.getElementById('draftMuteBtn');
-  if (btn) btn.textContent = musicMuted ? '🔇' : '🔊';
-  if (masterGain) {
-    masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
-    masterGain.gain.setTargetAtTime(musicMuted ? 0 : 0.8, audioCtx.currentTime, 0.3);
-  }
+function playSnuffHit() {
+  const c = ac(), t = c.currentTime;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(70, t);
+  o.frequency.exponentialRampToValueAtTime(25, t+0.18);
+  g.gain.setValueAtTime(0.75, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+0.28);
+  o.connect(g); g.connect(c.destination);
+  o.start(t); o.stop(t+0.32);
 }
 
-// ── Low-level helpers ──
-function node_osc(type, freq, t, dur, vol, detune=0) {
-  const osc = audioCtx.createOscillator();
-  const g   = audioCtx.createGain();
-  osc.type  = type;
-  osc.frequency.setValueAtTime(freq, t);
-  if (detune) osc.detune.setValueAtTime(detune, t);
-  osc.connect(g); g.connect(masterGain);
-  g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(vol, t + 0.03);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  osc.start(t); osc.stop(t + dur + 0.05);
-  musicNodes.push(osc, g);
-}
-
-function node_noise(t, dur, vol, cutoff=900) {
-  const len  = Math.ceil(audioCtx.sampleRate * Math.min(dur, 2));
-  const buf  = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
-  const d    = buf.getChannelData(0);
-  for (let i=0;i<len;i++) d[i] = Math.random()*2-1;
-  const src  = audioCtx.createBufferSource();
-  src.buffer = buf;
-  const flt  = audioCtx.createBiquadFilter();
-  flt.type   = 'lowpass';
-  flt.frequency.setValueAtTime(cutoff, t);
-  const g    = audioCtx.createGain();
-  src.connect(flt); flt.connect(g); g.connect(masterGain);
-  g.gain.setValueAtTime(vol, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  src.start(t); src.stop(t + dur + 0.05);
-  musicNodes.push(src, g);
-}
-
-// ── Tribal chant voice (synthesized "AH" vowel) ──
-// Uses a stack of oscillators with vibrato to mimic massed vocals
-function chantVoice(freq, t, dur, vol) {
-  // Fundamental + formant harmonics for "ah" vowel
-  const harmonics = [
-    [1.0,  1.00],
-    [2.0,  0.55],
-    [3.0,  0.30],
-    [4.0,  0.15],
-    [5.0,  0.08],
-  ];
-  harmonics.forEach(([mult, hVol]) => {
-    // Slow vibrato via frequency modulation
-    const osc = audioCtx.createOscillator();
-    const vib = audioCtx.createOscillator();
-    const vibG = audioCtx.createGain();
-    const g   = audioCtx.createGain();
-    osc.type  = 'sine';
-    osc.frequency.setValueAtTime(freq * mult, t);
-    // vibrato depth grows over time
-    vib.frequency.setValueAtTime(4.5 + Math.random() * 1.5, t);
-    vib.type = 'sine';
-    vibG.gain.setValueAtTime(freq * mult * 0.008, t);
-    vibG.gain.linearRampToValueAtTime(freq * mult * 0.018, t + dur * 0.4);
-    vib.connect(vibG); vibG.connect(osc.frequency);
-    osc.connect(g); g.connect(masterGain);
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(vol * hVol, t + 0.12);  // slow attack
-    g.gain.setValueAtTime(vol * hVol, t + dur - 0.25);
-    g.gain.linearRampToValueAtTime(0, t + dur);
-    osc.start(t); osc.stop(t + dur + 0.1);
-    vib.start(t); vib.stop(t + dur + 0.1);
-    musicNodes.push(osc, vib, vibG, g);
-  });
-}
-
-// ── Taiko drum ──
-function taiko(t, vel=0.8) {
-  // Low boom body
-  const body = audioCtx.createOscillator();
-  const bodyG = audioCtx.createGain();
-  body.type = 'sine';
-  body.frequency.setValueAtTime(65, t);
-  body.frequency.exponentialRampToValueAtTime(28, t + 0.25);
-  bodyG.gain.setValueAtTime(vel, t);
-  bodyG.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
-  body.connect(bodyG); bodyG.connect(masterGain);
-  body.start(t); body.stop(t + 0.6);
-  musicNodes.push(body, bodyG);
-  // Attack transient
-  node_noise(t, 0.04, vel * 0.6, 1800);
-  // Resonance overtone
-  node_osc('triangle', 130, t, 0.15, vel * 0.25, 0);
-}
-
-// ── Small hand drum / clave accent ──
-function clave(t, vel=0.3) {
-  node_osc('square', 900, t, 0.06, vel * 0.4, 0);
-  node_noise(t, 0.03, vel * 0.2, 3000);
-}
-
-// ── Strings sustained chord ──
-function strings(freqs, t, dur, vol=0.14) {
-  freqs.forEach(f => {
-    node_osc('sawtooth', f,      t, dur, vol,      -10);
-    node_osc('sawtooth', f,      t, dur, vol,      +10);
-    node_osc('triangle', f*0.5,  t, dur, vol*0.5,    0);
-  });
-}
-
-// ── Chant melody line (Am pentatonic: A C D E G) ──
-// Voiced as a unison choir phrase
-const CHANT_NOTES = [220, 261.6, 293.7, 329.6, 392]; // A3 C4 D4 E4 G4
-const CHANT_PHRASE = [0,2,1,0,3,2,4,3,2,0]; // indices into CHANT_NOTES
-
-// Chord progression — Am / F / C / E
-const CHORDS = [
-  [220, 261.6, 329.6],       // Am
-  [174.6, 220, 261.6],       // F
-  [261.6, 329.6, 392],       // C
-  [164.8, 220, 246.9, 329.6],// E7 (tension)
-];
-
-// Drum pattern: [offset, vel, type] type: 'taiko'|'clave'
-const DRUM_PAT = [
-  [0,    0.85, 'taiko'],
-  [0.5,  0.25, 'clave'],
-  [1.0,  0.60, 'taiko'],
-  [1.33, 0.20, 'clave'],
-  [1.5,  0.35, 'clave'],
-  [2.0,  0.70, 'taiko'],
-  [2.5,  0.25, 'clave'],
-  [3.0,  0.80, 'taiko'],
-  [3.5,  0.20, 'clave'],
-];
-const BAR = 3.6; // seconds per bar (≈ 66bpm for tribal feel)
-
-function scheduleBar(barIdx, t) {
-  const chord = CHORDS[barIdx % CHORDS.length];
-  // Drums
-  DRUM_PAT.forEach(([off, vel, type]) => {
-    if (type === 'taiko') taiko(t + off, vel);
-    else clave(t + off, vel);
-  });
-  // Strings — slow swell in
-  strings(chord, t, BAR + 0.2, 0.12);
-  // Bass
-  node_osc('sine', chord[0] * 0.5, t, BAR, 0.20);
-  // Chant phrase — 2 voices, staggered, every other bar
-  if (barIdx % 2 === 0) {
-    CHANT_PHRASE.forEach((ni, i) => {
-      const noteT = t + (i / CHANT_PHRASE.length) * BAR * 1.8;
-      const freq  = CHANT_NOTES[ni];
-      chantVoice(freq,        noteT, 0.55, 0.10);
-      chantVoice(freq * 1.5,  noteT, 0.55, 0.05); // upper harmony
-    });
-  }
-}
-
-function scheduleMusic() {
-  const LOOK = 0.35;
-  while (nextBarTime < audioCtx.currentTime + LOOK) {
-    scheduleBar(currentBar, nextBarTime);
-    currentBar++;
-    nextBarTime += BAR;
-  }
-  schedulerTimer = setTimeout(scheduleMusic, 120);
-}
-
-function startMusic(fadeInTime=2.0) {
-  initAudio(); resumeAudio();
-  // Cancel any existing scheduler
-  if (schedulerTimer) { clearTimeout(schedulerTimer); schedulerTimer = null; }
-  // Stop old nodes cleanly without nuking gain
-  musicNodes.forEach(n => { try { n.stop ? n.stop() : n.disconnect(); } catch(e){} });
-  musicNodes = [];
-  currentBar = 0;
-  nextBarTime = audioCtx.currentTime + 0.15;
-  masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
-  masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
-  masterGain.gain.linearRampToValueAtTime(musicMuted ? 0 : 0.8, audioCtx.currentTime + fadeInTime);
-  scheduleMusic();
-}
-
-function stopMusic(fadeOut=0.6) {
-  if (schedulerTimer) { clearTimeout(schedulerTimer); schedulerTimer = null; }
-  if (masterGain && audioCtx) {
-    masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
-    masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, fadeOut * 0.4);
-  }
-  setTimeout(() => {
-    musicNodes.forEach(n => { try { n.stop ? n.stop() : n.disconnect(); } catch(e){} });
-    musicNodes = [];
-  }, (fadeOut + 0.5) * 1000);
-}
-
-// ── Winner reveal swell — full choral climax ──
-function playWinnerSwell() {
-  if (!audioCtx) return;
-  const t = audioCtx.currentTime + 0.1;
-  // Stop scheduler so we take over
-  if (schedulerTimer) { clearTimeout(schedulerTimer); schedulerTimer = null; }
+function playWinnerBoom() {
+  const c = ac(), now = c.currentTime;
   // Drum roll
-  for (let i=0;i<12;i++) taiko(t + i*0.09, 0.3 + i*0.055);
-  // Full Am chord swell
-  const swell = [110, 165, 220, 261.6, 329.6, 440];
-  strings(swell, t+0.9, 5.0, 0.18);
-  // Chanting climax — all voices at once
-  CHANT_NOTES.forEach((f,i) => {
-    chantVoice(f,     t+0.9+i*0.12, 4.5, 0.14);
-    chantVoice(f*2,   t+0.9+i*0.12, 4.5, 0.07);
+  for (let i=0;i<10;i++) playDrum(now + i*0.08);
+  // Triumphant A-major chord
+  [[220,0.20],[277.2,0.16],[330,0.16],[440,0.12],[550,0.08]].forEach(([f,vol],i) => {
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(f, now+0.7);
+    o.detune.setValueAtTime(i%2===0?-8:8, now+0.7);
+    g.gain.setValueAtTime(0, now+0.7);
+    g.gain.linearRampToValueAtTime(vol, now+0.85);
+    g.gain.setValueAtTime(vol, now+2.8);
+    g.gain.linearRampToValueAtTime(0, now+5.5);
+    o.connect(g); g.connect(c.destination);
+    o.start(now+0.7); o.stop(now+5.6);
   });
-  // Master swell then fade
-  masterGain.gain.cancelScheduledValues(t);
-  masterGain.gain.setValueAtTime(musicMuted ? 0 : 0.8, t);
-  masterGain.gain.linearRampToValueAtTime(musicMuted ? 0 : 1.0, t + 1.5);
-  masterGain.gain.setValueAtTime(musicMuted ? 0 : 1.0, t + 3.5);
-  masterGain.gain.linearRampToValueAtTime(0, t + 7.0);
+  // Chant voices
+  [220,293.7,329.6,440].forEach((f,i) => {
+    const o = c.createOscillator(), vib = c.createOscillator();
+    const vg = c.createGain(), g = c.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(f, now+0.9);
+    vib.frequency.setValueAtTime(4.5+i*0.3, now+0.9); vib.type = 'sine';
+    vg.gain.setValueAtTime(f*0.012, now+0.9);
+    vib.connect(vg); vg.connect(o.frequency);
+    g.gain.setValueAtTime(0, now+0.9);
+    g.gain.linearRampToValueAtTime(0.13, now+1.5);
+    g.gain.setValueAtTime(0.13, now+3.8);
+    g.gain.linearRampToValueAtTime(0, now+6.5);
+    o.connect(g); g.connect(c.destination);
+    o.start(now+0.9); o.stop(now+6.6);
+    vib.start(now+0.9); vib.stop(now+6.6);
+  });
 }
 
-// legacy aliases so existing call-sites still work
-function startDraftMusic(n) { startMusic(2.0); }
-function stopDraftMusic()    { stopMusic(0.8); }
-function onPickReveal()      { /* removed — no per-pick sfx */ }
-function onDraftComplete()   { playWinnerSwell(); }
+// Draft music — simple looping tribal drums + strings
+let draftMusicNodes = [], draftMusicTimer = null;
 
-// ══════════════════════════════════════════════════════
-// WINNER REVEAL OVERLAY
-// ══════════════════════════════════════════════════════
-function buildWinnerUrl(seasonName, winnerPlayer, winnerContestant, allContestants) {
-  const payload = {
-    s: seasonName,
-    wp: winnerPlayer,
-    wc: winnerContestant,
-    all: allContestants, // [{name, player, eliminated}]
-  };
-  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-  return `${window.location.origin}${window.location.pathname}?winner=${encoded}`;
+function startDraftMusic() {
+  stopDraftMusic();
+  const c = ac();
+  const CHORDS = [[220,261.6,329.6],[174.6,220,261.6],[261.6,329.6,392],[164.8,220,329.6]];
+  const DRUMS = [0,0.5,1.0,1.33,1.5,2.0,2.5,3.0,3.5];
+  const BAR = 3.6;
+  let bar = 0, nextBar = c.currentTime + 0.15;
+  const masterG = c.createGain();
+  masterG.gain.setValueAtTime(0, c.currentTime);
+  masterG.gain.linearRampToValueAtTime(0.75, c.currentTime + 2.0);
+  masterG.connect(c.destination);
+  draftMusicNodes.push(masterG);
+
+  function schedBar(chord, t) {
+    // Drums
+    DRUMS.forEach((off,di) => {
+      const vel = di===0||di===7 ? 0.85 : di%2===0 ? 0.55 : 0.25;
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(di%3===0?85:65, t+off);
+      o.frequency.exponentialRampToValueAtTime(28, t+off+0.22);
+      g.gain.setValueAtTime(vel, t+off);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+off+0.45);
+      o.connect(g); g.connect(masterG);
+      o.start(t+off); o.stop(t+off+0.5);
+      draftMusicNodes.push(o,g);
+    });
+    // Strings
+    chord.forEach(f => {
+      [[-8,0.13],[8,0.13],[0,0.08]].forEach(([det,vol]) => {
+        const o = c.createOscillator(), g = c.createGain();
+        o.type = det===0?'triangle':'sawtooth';
+        o.frequency.setValueAtTime(f, t);
+        o.detune.setValueAtTime(det, t);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(vol, t+0.1);
+        g.gain.setValueAtTime(vol, t+BAR-0.2);
+        g.gain.linearRampToValueAtTime(0, t+BAR+0.1);
+        o.connect(g); g.connect(masterG);
+        o.start(t); o.stop(t+BAR+0.15);
+        draftMusicNodes.push(o,g);
+      });
+    });
+    // Bass
+    const bo = c.createOscillator(), bg = c.createGain();
+    bo.type='sine'; bo.frequency.setValueAtTime(chord[0]*0.5, t);
+    bg.gain.setValueAtTime(0.18, t); bg.gain.setValueAtTime(0.18, t+BAR-0.1);
+    bg.gain.linearRampToValueAtTime(0, t+BAR+0.1);
+    bo.connect(bg); bg.connect(masterG); bo.start(t); bo.stop(t+BAR+0.15);
+    draftMusicNodes.push(bo,bg);
+    // Chant every 2 bars
+    if (bar%2===0) {
+      [0,2,1,3,2,4,1,0].forEach((ni,i) => {
+        const freqs=[220,261.6,293.7,329.6,392];
+        const f=freqs[ni], noteT=t+(i/8)*BAR*1.7;
+        const o=c.createOscillator(), vib=c.createOscillator();
+        const vg=c.createGain(), g=c.createGain();
+        o.type='sine'; o.frequency.setValueAtTime(f,noteT);
+        vib.type='sine'; vib.frequency.setValueAtTime(5,noteT);
+        vg.gain.setValueAtTime(f*0.012,noteT);
+        vib.connect(vg); vg.connect(o.frequency);
+        g.gain.setValueAtTime(0,noteT);
+        g.gain.linearRampToValueAtTime(0.09,noteT+0.1);
+        g.gain.setValueAtTime(0.09,noteT+0.45);
+        g.gain.linearRampToValueAtTime(0,noteT+0.55);
+        o.connect(g); g.connect(masterG);
+        o.start(noteT); o.stop(noteT+0.6);
+        vib.start(noteT); vib.stop(noteT+0.6);
+        draftMusicNodes.push(o,vib,vg,g);
+      });
+    }
+  }
+
+  function tick() {
+    while (nextBar < c.currentTime + 0.4) {
+      schedBar(CHORDS[bar % CHORDS.length], nextBar);
+      bar++; nextBar += BAR;
+    }
+    draftMusicTimer = setTimeout(tick, 150);
+  }
+  tick();
 }
 
-function shareWinnerLink(seasonName, winnerPlayer, winnerContestant, allContestants) {
-  const url = buildWinnerUrl(seasonName, winnerPlayer, winnerContestant, allContestants);
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(url).then(() => showToast('🏆 Winner link copied!'));
-  } else {
-    const ta = document.createElement('textarea');
-    ta.value = url; document.body.appendChild(ta);
-    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-    showToast('🏆 Winner link copied!');
+function stopDraftMusic() {
+  if (draftMusicTimer) { clearTimeout(draftMusicTimer); draftMusicTimer = null; }
+  draftMusicNodes.forEach(n => { try { if(n.gain) { n.gain.setValueAtTime(0, _ac ? _ac.currentTime : 0); } n.stop && n.stop(); } catch(e){} });
+  draftMusicNodes = [];
+}
+
+// legacy aliases
+function onPickReveal() {}
+function onDraftComplete() { stopDraftMusic(); }
+
+// ══════════════════════════════════════════════════════
+// WINNER REVEAL — full screen cinematic
+// ══════════════════════════════════════════════════════
+let wrData = null;
+let wrParticles = [], wrAnimating = false, wrCanvas = null, wrCtx = null;
+let wrRainTimer = null;
+
+function initWrCanvas() {
+  wrCanvas = document.getElementById('wrParticles');
+  wrCtx = wrCanvas.getContext('2d');
+  wrCanvas.width = window.innerWidth;
+  wrCanvas.height = window.innerHeight;
+}
+
+function wrSpawnFirework(x, y, color) {
+  for (let i=0;i<45;i++) {
+    const angle = (Math.PI*2*i/45)+Math.random()*0.3;
+    const speed = 2.5+Math.random()*6;
+    wrParticles.push({ x,y,
+      vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed-2,
+      alpha:1, color, size:2+Math.random()*3,
+      decay:0.013+Math.random()*0.009 });
   }
 }
 
-// Called after season ended — show share button
-function showWinnerShareBtn(seasonName, winnerPlayer, winnerContestant, allContestants) {
-  // inject a share button into the history page for this season
-  // and show a toast with share option
-  const url = buildWinnerUrl(seasonName, winnerPlayer, winnerContestant, allContestants);
-  // Brief celebration toast
-  showToast(`🏆 ${winnerPlayer} wins! Link ready to copy.`);
+function wrSpawnRain() {
+  const cols=['#FFD700','#ff6b1a','#ff9a3c','#ffffff','#e8d5a3','#ffd000'];
+  for (let i=0;i<10;i++) {
+    wrParticles.push({ x:Math.random()*wrCanvas.width, y:-10,
+      vx:(Math.random()-0.5)*1.5, vy:2.5+Math.random()*3,
+      alpha:1, color:cols[Math.floor(Math.random()*cols.length)],
+      size:4+Math.random()*5, decay:0.005, isRain:true });
+  }
 }
 
-// Check URL for winner replay
-function checkWinnerMode() {
-  const params = new URLSearchParams(window.location.search);
-  const encoded = params.get('winner');
-  if (!encoded) return false;
-  try {
-    const payload = JSON.parse(decodeURIComponent(escape(atob(encoded))));
-    launchWinnerReveal(payload);
-    return true;
-  } catch(e) { return false; }
+function wrDrawParticles() {
+  if (!wrAnimating) return;
+  wrCtx.clearRect(0,0,wrCanvas.width,wrCanvas.height);
+  wrParticles = wrParticles.filter(p=>p.alpha>0.01);
+  wrParticles.forEach(p => {
+    wrCtx.save(); wrCtx.globalAlpha=p.alpha; wrCtx.fillStyle=p.color;
+    if (p.isRain) { wrCtx.fillRect(p.x,p.y,p.size*0.4,p.size*2.5); }
+    else { wrCtx.beginPath(); wrCtx.arc(p.x,p.y,p.size,0,Math.PI*2); wrCtx.fill(); }
+    wrCtx.restore();
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.09; p.vx*=0.99; p.alpha-=p.decay;
+  });
+  requestAnimationFrame(wrDrawParticles);
+}
+
+function wrStartParticles() {
+  wrAnimating = true;
+  initWrCanvas();
+  const W=wrCanvas.width, H=wrCanvas.height;
+  const bursts=[[W*0.15,H*0.75,'#FFD700'],[W*0.85,H*0.75,'#ff6b1a'],
+    [W*0.5,H*0.5,'#ffffff'],[W*0.25,H*0.4,'#FFD700'],
+    [W*0.75,H*0.4,'#ff9a3c'],[W*0.5,H*0.25,'#FFD700']];
+  bursts.forEach(([x,y,c],i)=>setTimeout(()=>wrSpawnFirework(x,y,c),i*200));
+  let fw=0;
+  const fwT=setInterval(()=>{
+    wrSpawnFirework(W*(0.15+Math.random()*0.7),H*(0.15+Math.random()*0.55),
+      ['#FFD700','#ff6b1a','#fff','#ff9a3c'][fw%4]);
+    fw++; if(fw>18) clearInterval(fwT);
+  },550);
+  wrRainTimer=setInterval(wrSpawnRain,100);
+  setTimeout(()=>{ clearInterval(wrRainTimer); },9000);
+  requestAnimationFrame(wrDrawParticles);
+}
+
+function wrFlash(cb) {
+  const f=document.getElementById('wrFlash');
+  f.style.opacity='1';
+  setTimeout(()=>{
+    f.style.transition='opacity 0.7s ease';
+    f.style.opacity='0';
+    setTimeout(cb,100);
+  },90);
 }
 
 function launchWinnerReveal(data) {
-  // Hide main app
+  wrData = data;
+  const ov = document.getElementById('winnerRevealOverlay');
+  ov.style.display='flex';
+  // hide app chrome
   document.querySelector('.app-header').style.display='none';
   document.querySelector('.bottom-tabs').style.display='none';
   document.querySelector('.scroll-area').style.display='none';
 
-  const overlay = document.getElementById('winnerRevealOverlay');
-  overlay.classList.add('open');
+  document.getElementById('wrHomeBtn').href = window.location.origin+window.location.pathname;
 
-  // Set home link
-  document.getElementById('winnerRevealHomeBtn').href =
-    window.location.origin + window.location.pathname;
+  const eliminated = data.all.filter(c=>c.eliminated);
+  const winner = data.all.find(c=>!c.eliminated) || {name:data.wc,player:data.wp,pi:0};
 
-  // Start music immediately
-  startMusic(1.5);
+  // Fade in intro text
+  setTimeout(()=>{
+    document.getElementById('wrIntroText').style.opacity='0.7';
+    document.getElementById('wrSeasonText').style.opacity='1';
+    document.getElementById('wrSeasonText').textContent = data.s;
+  },100);
 
-  // Run flame-out animation then reveal
-  runFlameAnimation(data);
-}
-
-function runFlameAnimation(data) {
-  const stage = document.getElementById('winnerFlameStage');
-  stage.innerHTML = '';
-
-  const eliminated = data.all.filter(c => c.eliminated);
-  const winner     = data.all.find(c => !c.eliminated) || { name: data.wc, player: data.wp };
-
-  // Place all names scattered on screen in a grid
-  const allNames = [...data.all];
-  const cols = 3;
-  allNames.forEach((c, i) => {
-    const el = document.createElement('div');
-    el.className = 'flame-name' + (!c.eliminated ? ' flame-winner-seed' : '');
-    el.innerHTML = `<div class="fn-fire">${!c.eliminated ? '🔥' : '🔥'}</div><div class="fn-text">${c.name}</div>`;
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    el.style.left = (8 + col * 31 + (row % 2 ? 5 : 0)) + '%';
-    el.style.top  = (10 + row * 16) + '%';
-    stage.appendChild(el);
+  // Build torch grid
+  const grid=document.getElementById('wrTorchGrid');
+  grid.innerHTML='';
+  data.all.forEach(c=>{
+    const card=document.createElement('div');
+    const isW=!c.eliminated;
+    card.style.cssText=`display:flex;flex-direction:column;align-items:center;gap:3px;width:85px;padding:8px 4px;border:1px solid rgba(255,107,26,${isW?'0.5':'0.3'});border-radius:10px;background:rgba(255,107,26,${isW?'0.1':'0.05'});transition:all 0.5s ease;`;
+    card.id='wrtc-'+c.name.replace(/\s/g,'_');
+    card.innerHTML=`<div class="wrf" style="font-size:24px;transition:all 0.4s;filter:drop-shadow(0 0 6px #ff6b1a);">🔥</div><div style="font-size:10px;color:#e8d5a3;text-align:center;font-family:Cinzel,serif;letter-spacing:0.3px;line-height:1.2;transition:all 0.4s;">${c.name}</div>`;
+    grid.appendChild(card);
   });
 
-  // Snuff eliminated names — faster, 500ms apart synced to drums
-  const SNUFF_INTERVAL = 500;
-  let snuffIndex = 0;
-
-  const snuffNext = () => {
-    if (snuffIndex >= eliminated.length) {
-      // Brief dramatic pause — winner torch pulses alone
-      const winnerEl = Array.from(document.querySelectorAll('.flame-name.flame-winner-seed'))[0];
-      if (winnerEl) {
-        winnerEl.classList.add('flame-winner-pulse');
+  // Snuff one by one
+  let idx=0;
+  const SNUFF=520;
+  setTimeout(()=>{
+    const snuffNext=()=>{
+      if (idx>=eliminated.length) {
+        // Winner pulses alone
+        const wcard=document.getElementById('wrtc-'+winner.name.replace(/\s/g,'_'));
+        if(wcard){
+          wcard.style.borderColor='gold';
+          wcard.style.background='rgba(255,215,0,0.12)';
+          wcard.style.transform='scale(1.15)';
+          wcard.querySelector('.wrf').style.fontSize='36px';
+          wcard.querySelector('.wrf').style.filter='drop-shadow(0 0 16px gold)';
+        }
+        setTimeout(()=>wrShowWinner(winner),1800);
+        return;
       }
-      setTimeout(() => showWinnerReveal(data), 1800);
-      return;
-    }
-    const victim = eliminated[snuffIndex];
-    const allEls = Array.from(document.querySelectorAll('.flame-name'));
-    const victimEl = allEls.find(el => el.querySelector('.fn-text')?.textContent === victim.name);
-    if (victimEl) {
-      // Flash bright then snuff
-      const fire = victimEl.querySelector('.fn-fire');
-      fire.style.transition = 'opacity 0.15s';
-      fire.textContent = '💥';
-      setTimeout(() => {
-        victimEl.classList.add('snuffed');
-        fire.innerHTML = SMOKE_SVG;
-      }, 150);
-    }
-    snuffIndex++;
-    setTimeout(snuffNext, SNUFF_INTERVAL);
-  };
-
-  // Start after short music intro
-  setTimeout(snuffNext, 1500);
+      const v=eliminated[idx];
+      const card=document.getElementById('wrtc-'+v.name.replace(/\s/g,'_'));
+      if(card){
+        playSnuffHit();
+        card.style.opacity='0.22';
+        card.style.borderColor='rgba(255,255,255,0.07)';
+        card.style.background='rgba(255,255,255,0.02)';
+        const fire=card.querySelector('.wrf');
+        fire.textContent='💨';
+        fire.style.filter='none';
+        fire.style.fontSize='16px';
+        const nm=card.querySelectorAll('div')[1];
+        if(nm){nm.style.color='#444';nm.style.textDecoration='line-through';}
+      }
+      idx++; setTimeout(snuffNext,SNUFF);
+    };
+    snuffNext();
+  },1800);
 }
 
-function doShareWinnerLink() {
-  const w = window._lastWinner;
-  if (!w) return;
-  shareWinnerLink(w.seasonName, w.winnerPlayer, w.winnerContestant, w.allContestants);
+function wrShowWinner(winner) {
+  wrFlash(()=>{
+    document.getElementById('wrIntro').style.display='none';
+    const ws=document.getElementById('wrWinnerStage');
+    ws.style.display='flex';
+
+    document.getElementById('wrWinnerName').textContent=winner.name||wrData.wc;
+    document.getElementById('wrContestantSub').textContent='The Sole Survivor';
+    document.getElementById('wrPlayerName').textContent='🔥 Team '+(winner.player||wrData.wp);
+
+    // Staggered show
+    const els=[
+      ['wrBigTorch',50,'opacity:1;transform:scale(1)'],
+      ['wrSoleLabel',220,'opacity:1'],
+      ['wrWinnerName',320,'opacity:1;transform:scale(1) translateY(0)'],
+      ['wrContestantSub',550,'opacity:1'],
+      ['wrPlayerCard',750,'opacity:1;transform:translateY(0)'],
+      ['wrShareBtn',980,'opacity:1;transform:translateY(0)'],
+      ['wrHomeBtn',1180,'opacity:0.6'],
+    ];
+    els.forEach(([id,delay,css])=>{
+      setTimeout(()=>{
+        const el=document.getElementById(id);
+        if(el) el.style.cssText+=(';'+css);
+      },delay);
+    });
+
+    playWinnerBoom();
+    setTimeout(wrStartParticles, 200);
+  });
 }
 
-function showWinnerReveal(data) {
-  const stage = document.getElementById('winnerFlameStage');
-
-  // White flash
-  const flash = document.createElement('div');
-  flash.style.cssText = 'position:absolute;inset:0;background:white;opacity:0;transition:opacity 0.12s;z-index:10;pointer-events:none;';
-  stage.appendChild(flash);
-  void flash.offsetWidth;
-  flash.style.opacity = '0.85';
-  setTimeout(() => {
-    flash.style.transition = 'opacity 0.7s';
-    flash.style.opacity = '0';
-    setTimeout(() => flash.remove(), 800);
-  }, 130);
-
-  // Fade out stage
-  setTimeout(() => { stage.style.transition='opacity 0.5s'; stage.style.opacity='0'; }, 200);
-
-  // Play swell
-  playWinnerSwell();
-
-  // Show winner card
-  setTimeout(() => {
-    stage.style.display = 'none';
-    const reveal = document.getElementById('winnerRevealCard');
-    reveal.style.display = 'flex';
-
-    // Always use data.wc / data.wp directly — most reliable
-    document.getElementById('wrSeasonName').textContent = data.s || '';
-    document.getElementById('wrWinnerName').textContent = data.wc || '';
-    document.getElementById('wrPlayerName').textContent = data.wp || '';
-
-    // Avatar — find pi from allContestants, fallback to 0
-    const winnerEntry = (data.all||[]).find(c => c.name === data.wc && c.player === data.wp);
-    const pi = winnerEntry ? (winnerEntry.pi || 0) : 0;
-    const av = document.getElementById('wrAvatar');
-    av.className = `wr-avatar ${AV[pi % 6]}`;
-    av.textContent = initials(data.wp || '');
-
-    launchConfetti();
-  }, 380);
+function checkWinnerMode() {
+  const params=new URLSearchParams(window.location.search);
+  const encoded=params.get('winner');
+  if (!encoded) return false;
+  try {
+    const d=JSON.parse(decodeURIComponent(escape(atob(encoded))));
+    launchWinnerReveal(d);
+    return true;
+  } catch(e){ return false; }
 }
 
-// Simple CSS confetti burst
-function launchConfetti() {
-  const container = document.getElementById('winnerRevealOverlay');
-  const colors = ['#ff6b1a','#ffd700','#ff9a3c','#e8d5a3','#4cb86a','#ff4444'];
-  for (let i = 0; i < 60; i++) {
-    const p = document.createElement('div');
-    const color = colors[i % colors.length];
-    const size  = 6 + Math.random() * 8;
-    const x     = 20 + Math.random() * 60; // % from left
-    const delay = Math.random() * 0.8;
-    const dur   = 1.5 + Math.random() * 1.5;
-    const rot   = Math.random() * 720;
-    p.style.cssText = `
-      position:absolute;
-      left:${x}%; top:-10px;
-      width:${size}px; height:${size}px;
-      background:${color};
-      border-radius:${Math.random() > 0.5 ? '50%' : '2px'};
-      opacity:1;
-      pointer-events:none;
-      z-index:20;
-      animation: confettiFall ${dur}s ${delay}s ease-in forwards;
-    `;
-    container.appendChild(p);
-    setTimeout(() => p.remove(), (delay + dur + 0.2) * 1000);
+function buildWinnerUrl(data) {
+  const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  return window.location.origin+window.location.pathname+'?winner='+encoded;
+}
+
+function shareWinnerLink(data) {
+  const url=buildWinnerUrl(data);
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(()=>showToast('🏆 Winner link copied!'));
+  } else {
+    const ta=document.createElement('textarea');
+    ta.value=url; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('🏆 Winner link copied!');
   }
 }
 
-// ── HELPERS ──
-function shuffle(arr) {
-  for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
-  return arr;
+function wrCopyLink() {
+  if(!wrData) return;
+  shareWinnerLink(wrData);
+  document.getElementById('wrShareBtn').textContent='✅ Copied!';
+  setTimeout(()=>{document.getElementById('wrShareBtn').textContent='🔗 Share This Moment';},2500);
 }
-function initials(name) { return (name||'').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
-function escJs(str) { return String(str).replace(/'/g,"\\'"); }
+
 function renderError() {
   document.getElementById('currentContent').innerHTML=`<div class="empty"><span class="empty-icon">⚠️</span><h2>Connection Error</h2><p>Check your Apps Script URL in Settings.</p></div>`;
   state.loaded=true; renderTribe(); renderHistory();
 }
 
+
 </script>
 
-<!-- WINNER REVEAL OVERLAY -->
-<div id="winnerRevealOverlay">
-  <div id="winnerFlameStage"></div>
-  <div id="winnerRevealCard">
-    <div class="wr-eyebrow">Survivor</div>
-    <div class="wr-season" id="wrSeasonName"></div>
-    <span class="wr-trophy">🏆</span>
-    <div class="wr-sole-survivor">The Sole Survivor</div>
-    <div class="wr-winner-name" id="wrWinnerName"></div>
-    <div class="wr-player-row">
-      <div class="wr-avatar" id="wrAvatar"></div>
-      <div>
-        <div class="wr-player-label">Team</div>
-        <div class="wr-player-name" id="wrPlayerName"></div>
-      </div>
+<!-- WINNER REVEAL OVERLAY — full screen takeover -->
+<div id="winnerRevealOverlay" style="display:none;position:fixed;inset:0;background:#000;z-index:500;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;">
+  <canvas id="wrParticles" style="position:absolute;inset:0;pointer-events:none;z-index:0;width:100%;height:100%;"></canvas>
+  <div id="wrFlash" style="position:fixed;inset:0;background:white;opacity:0;pointer-events:none;z-index:10;transition:opacity 0.1s;"></div>
+
+  <!-- Phase 1: torch grid -->
+  <div id="wrIntro" style="text-align:center;z-index:2;position:relative;width:100%;padding:0 12px;">
+    <div id="wrIntroText" style="color:#e8d5a3;font-family:Cinzel,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;opacity:0;transition:opacity 1s ease;margin-bottom:8px;">The tribe has spoken</div>
+    <div id="wrSeasonText" style="color:#ff9a3c;font-family:Cinzel,serif;font-size:13px;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;opacity:0;transition:opacity 0.8s ease 0.4s;"></div>
+    <div id="wrTorchGrid" style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;width:100%;max-width:360px;margin:0 auto;"></div>
+  </div>
+
+  <!-- Phase 2: winner card -->
+  <div id="wrWinnerStage" style="display:none;flex-direction:column;align-items:center;text-align:center;z-index:2;position:relative;padding:20px 16px;width:100%;">
+    <div id="wrBigTorch" style="font-size:72px;opacity:0;transform:scale(0.3);transition:all 0.7s cubic-bezier(0.34,1.56,0.64,1);filter:drop-shadow(0 0 30px #ff6b1a) drop-shadow(0 0 60px gold);margin-bottom:8px;">🔥</div>
+    <div id="wrSoleLabel" style="font-family:Cinzel,serif;font-size:10px;letter-spacing:4px;color:#888;text-transform:uppercase;opacity:0;transition:opacity 0.5s ease 0.3s;margin-bottom:10px;">Sole Survivor</div>
+    <div id="wrWinnerName" style="font-family:Cinzel,serif;font-size:44px;font-weight:900;color:#FFD700;letter-spacing:2px;text-transform:uppercase;opacity:0;transform:scale(0.4) translateY(20px);transition:all 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.25s;text-shadow:0 0 40px rgba(255,215,0,0.8);line-height:1.1;margin-bottom:6px;"></div>
+    <div id="wrContestantSub" style="font-family:Cinzel,serif;font-size:14px;color:#e8d5a3;opacity:0;transition:opacity 0.5s ease 0.6s;margin-bottom:20px;letter-spacing:1px;"></div>
+    <div id="wrPlayerCard" style="border:1px solid rgba(255,215,0,0.3);border-radius:16px;padding:14px 24px;background:rgba(255,215,0,0.06);margin-bottom:24px;opacity:0;transform:translateY(16px);transition:all 0.5s ease 0.85s;width:100%;max-width:260px;">
+      <div style="font-size:10px;color:#888;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;font-family:Cinzel,serif;">Champion's Tribe</div>
+      <div id="wrPlayerName" style="font-size:22px;color:#fff;font-weight:700;font-family:Cinzel,serif;letter-spacing:1px;"></div>
     </div>
-    <a class="wr-home-btn" id="winnerRevealHomeBtn" href="#">🏝️ View Live Tracker</a>
+    <button id="wrShareBtn" onclick="wrCopyLink()" style="padding:14px 32px;background:linear-gradient(135deg,#ff6b1a,#c44a00);border:none;border-radius:50px;color:#fff;font-size:13px;font-family:Cinzel,serif;letter-spacing:1.5px;cursor:pointer;opacity:0;transform:translateY(10px);transition:all 0.4s ease 1.1s;text-transform:uppercase;box-shadow:0 4px 20px rgba(255,107,26,0.4);margin-bottom:12px;">🔗 Share This Moment</button>
+    <a id="wrHomeBtn" href="#" style="font-size:12px;color:#666;font-family:Cinzel,serif;letter-spacing:1px;opacity:0;transition:opacity 0.4s ease 1.3s;text-decoration:none;">🏝️ View Live Tracker</a>
   </div>
 </div>
 
