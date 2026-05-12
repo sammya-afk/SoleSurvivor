@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -506,7 +505,104 @@ body::before {
 /* player bar colors */
 .pc0{background:#e05c5c} .pc1{background:#4a9edd} .pc2{background:#4cb86a}
 .pc3{background:#a76fd4} .pc4{background:#e0973a} .pc5{background:#3ab8b0}
-/* ADVANCED TOGGLE */
+/* WINNER REVEAL OVERLAY */
+#winnerRevealOverlay {
+  position:fixed; inset:0; z-index:350; background:#050a05;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity 0.5s;
+  overflow:hidden;
+}
+#winnerRevealOverlay.open { opacity:1; pointer-events:all; }
+/* Flame stage */
+#winnerFlameStage {
+  position:absolute; inset:0;
+}
+.flame-name {
+  position:absolute;
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  transition: opacity 0.8s, transform 0.8s;
+}
+.fn-fire {
+  font-size:22px;
+  filter:drop-shadow(0 0 8px var(--torch));
+  animation:flicker 1.8s ease-in-out infinite alternate;
+  transition: opacity 0.6s;
+}
+.fn-text {
+  font-family:'Cinzel',serif;
+  font-size:13px; font-weight:600;
+  color:var(--sand);
+  text-shadow:0 0 8px rgba(255,107,26,0.5);
+  white-space:nowrap;
+  transition: color 0.6s, text-decoration 0.3s;
+}
+.flame-name.snuffed { opacity:0.28; }
+.flame-name.snuffed .fn-text { color:var(--text3); text-decoration:line-through; }
+.flame-name.flame-winner-seed .fn-text {
+  color:gold; font-size:15px;
+  text-shadow:0 0 14px rgba(255,215,0,0.6);
+}
+/* Winner card */
+#winnerRevealCard {
+  display:none;
+  flex-direction:column; align-items:center;
+  text-align:center; padding:32px 24px;
+  position:relative; z-index:2;
+  animation:rowIn 0.6s cubic-bezier(0.16,1,0.3,1) both;
+  width:100%; max-width:400px;
+}
+.wr-eyebrow {
+  font-family:'Cinzel',serif; font-size:11px; letter-spacing:4px;
+  color:var(--text3); text-transform:uppercase; margin-bottom:6px;
+}
+.wr-season { font-family:'Cinzel',serif; font-size:13px; color:var(--text2); margin-bottom:24px; }
+.wr-trophy {
+  font-size:90px; display:block; margin-bottom:16px;
+  filter:drop-shadow(0 0 32px rgba(255,215,0,0.7));
+  animation:trophyPulse 2s ease-in-out infinite alternate;
+}
+.wr-sole-survivor {
+  font-family:'Cinzel',serif; font-size:11px; letter-spacing:4px;
+  color:var(--sand-dark); text-transform:uppercase; margin-bottom:8px;
+}
+.wr-winner-name {
+  font-family:'Cinzel',serif; font-size:42px; font-weight:900;
+  color:gold; letter-spacing:2px; line-height:1;
+  text-shadow:0 0 40px rgba(255,215,0,0.8), 0 0 80px rgba(255,165,0,0.4);
+  animation:goldShimmer 2.5s ease-in-out infinite alternate;
+  margin-bottom:20px;
+}
+.wr-player-row {
+  display:flex; align-items:center; gap:12px;
+  background:rgba(255,255,255,0.06); border:1px solid var(--border2);
+  border-radius:var(--radius); padding:14px 20px; margin-bottom:28px;
+}
+.wr-avatar {
+  width:44px; height:44px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Cinzel',serif; font-size:15px; font-weight:700; color:white;
+  flex-shrink:0; border:2px solid rgba(255,255,255,0.2);
+}
+.wr-player-label { font-size:11px; color:var(--text2); margin-bottom:2px; }
+.wr-player-name  { font-family:'Cinzel',serif; font-size:17px; font-weight:700; color:var(--sand); }
+.wr-home-btn {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; padding:15px; border-radius:var(--radius);
+  background:linear-gradient(135deg,var(--torch),var(--torch-dim));
+  color:white; border:none; font-family:'Cinzel',serif;
+  font-size:13px; font-weight:700; letter-spacing:1.5px;
+  cursor:pointer; text-transform:uppercase;
+  box-shadow:0 4px 18px rgba(255,107,26,0.3); text-decoration:none;
+  transition:transform 0.1s;
+}
+.wr-home-btn:active { transform:scale(0.97); }
+.share-history-btn {
+  padding:8px 10px; border-radius:var(--radius-sm);
+  background:rgba(255,107,26,0.1); border:1px solid rgba(255,107,26,0.25);
+  color:var(--torch-glow); font-size:16px; cursor:pointer;
+  transition:background 0.15s, transform 0.1s; flex-shrink:0;
+}
+.share-history-btn:active { background:rgba(255,107,26,0.25); transform:scale(0.92); }
 .advanced-toggle {
   display: flex; align-items: center; justify-content: space-between;
   padding: 13px 16px;
@@ -525,74 +621,73 @@ body::before {
 
 /* WINNER CELEBRATION */
 .winner-banner {
-text-align: center;
-padding: 32px 20px 24px;
-animation: rowIn 0.5s cubic-bezier(0.16,1,0.3,1) both;
+  text-align: center;
+  padding: 32px 20px 24px;
+  animation: rowIn 0.5s cubic-bezier(0.16,1,0.3,1) both;
 }
 .winner-confetti {
-font-size: 56px;
-display: block;
-margin-bottom: 4px;
-animation: confettiBounce 1.2s cubic-bezier(0.34,1.56,0.64,1) both;
+  font-size: 56px;
+  display: block;
+  margin-bottom: 4px;
+  animation: confettiBounce 1.2s cubic-bezier(0.34,1.56,0.64,1) both;
 }
 @keyframes confettiBounce {
-0% { transform: scale(0) rotate(-10deg); opacity: 0; }
-60% { transform: scale(1.15) rotate(4deg); opacity: 1; }
-100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  0% { transform: scale(0) rotate(-10deg); opacity: 0; }
+  60% { transform: scale(1.15) rotate(4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 .winner-trophy {
-font-size: 80px;
-display: block;
-margin: 0 auto 16px;
-filter: drop-shadow(0 0 28px rgba(255,215,0,0.6));
-animation: trophyPulse 2s ease-in-out infinite alternate;
+  font-size: 80px;
+  display: block;
+  margin: 0 auto 16px;
+  filter: drop-shadow(0 0 28px rgba(255,215,0,0.6));
+  animation: trophyPulse 2s ease-in-out infinite alternate;
 }
 @keyframes trophyPulse {
-0% { filter: drop-shadow(0 0 16px rgba(255,215,0,0.4)); transform: scale(1); }
-100% { filter: drop-shadow(0 0 36px rgba(255,215,0,0.8)); transform: scale(1.06); }
+  0% { filter: drop-shadow(0 0 16px rgba(255,215,0,0.4)); transform: scale(1); }
+  100% { filter: drop-shadow(0 0 36px rgba(255,215,0,0.8)); transform: scale(1.06); }
 }
 .winner-label {
-font-family: ‘Cinzel’, serif;
-font-size: 11px; letter-spacing: 4px; text-transform: uppercase;
-color: var(–text2); margin-bottom: 6px;
+  font-family: 'Cinzel', serif;
+  font-size: 11px; letter-spacing: 4px; text-transform: uppercase;
+  color: var(--text2); margin-bottom: 6px;
 }
 .winner-player-name {
-font-family: ‘Cinzel’, serif;
-font-size: 32px; font-weight: 900;
-color: gold;
-text-shadow: 0 0 32px rgba(255,215,0,0.6);
-margin-bottom: 4px;
-animation: goldShimmer 2.5s ease-in-out infinite alternate;
+  font-family: 'Cinzel', serif;
+  font-size: 32px; font-weight: 900;
+  color: gold;
+  text-shadow: 0 0 32px rgba(255,215,0,0.6);
+  margin-bottom: 4px;
+  animation: goldShimmer 2.5s ease-in-out infinite alternate;
 }
 @keyframes goldShimmer {
-0% { text-shadow: 0 0 20px rgba(255,215,0,0.5); }
-100% { text-shadow: 0 0 40px rgba(255,215,0,0.9), 0 0 60px rgba(255,165,0,0.4); }
+  0% { text-shadow: 0 0 20px rgba(255,215,0,0.5); }
+  100% { text-shadow: 0 0 40px rgba(255,215,0,0.9), 0 0 60px rgba(255,165,0,0.4); }
 }
 .winner-contestant-name {
-font-size: 16px; color: var(–sand);
-margin-bottom: 6px; font-weight: 500;
+  font-size: 16px; color: var(--sand);
+  margin-bottom: 6px; font-weight: 500;
 }
 .winner-survivor-label {
-font-family: ‘Cinzel’, serif;
-font-size: 12px; letter-spacing: 2px;
-color: var(–torch-glow); text-transform: uppercase;
-margin-bottom: 28px;
+  font-family: 'Cinzel', serif;
+  font-size: 12px; letter-spacing: 2px;
+  color: var(--torch-glow); text-transform: uppercase;
+  margin-bottom: 28px;
 }
 .winner-end-btn {
-display: inline-flex; align-items: center; gap: 8px;
-padding: 14px 28px; border-radius: var(–radius);
-background: linear-gradient(135deg, #c8961a, #8a6200);
-color: white; border: none; font-family: ‘Cinzel’, serif;
-font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
-cursor: pointer; text-transform: uppercase;
-box-shadow: 0 4px 20px rgba(200,150,26,0.35);
-transition: transform 0.1s;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 14px 28px; border-radius: var(--radius);
+  background: linear-gradient(135deg, #c8961a, #8a6200);
+  color: white; border: none; font-family: 'Cinzel', serif;
+  font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
+  cursor: pointer; text-transform: uppercase;
+  box-shadow: 0 4px 20px rgba(200,150,26,0.35);
+  transition: transform 0.1s;
 }
 .winner-end-btn:active { transform: scale(0.97); }
 .winner-still-in { margin-top: 24px; width: 100%; }
 ::-webkit-scrollbar{width:3px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
 </style>
-
 </head>
 <body>
 
@@ -604,7 +699,6 @@ transition: transform 0.1s;
 </div>
 
 <!-- HEADER -->
-
 <header class="app-header">
   <div class="header-inner">
     <div class="logo">
@@ -623,11 +717,9 @@ transition: transform 0.1s;
 </header>
 
 <!-- SCROLL AREA -->
-
 <div class="scroll-area" id="scrollArea">
 
   <!-- CURRENT -->
-
   <div class="page active" id="page-current">
     <div class="page-inner">
       <div class="page-spacer"></div>
@@ -636,7 +728,6 @@ transition: transform 0.1s;
   </div>
 
   <!-- HISTORY -->
-
   <div class="page" id="page-history">
     <div class="page-inner">
       <div class="page-spacer"></div>
@@ -645,7 +736,6 @@ transition: transform 0.1s;
   </div>
 
   <!-- TRIBE -->
-
   <div class="page" id="page-tribe">
     <div class="page-inner">
       <div class="page-spacer"></div>
@@ -656,7 +746,6 @@ transition: transform 0.1s;
 </div>
 
 <!-- BOTTOM TABS -->
-
 <nav class="bottom-tabs">
   <div class="tab-item active" id="tab-current" onclick="switchTab('current')">
     <div class="tab-icon">🏝️</div>
@@ -673,7 +762,6 @@ transition: transform 0.1s;
 </nav>
 
 <!-- NEW SEASON MODAL -->
-
 <div class="overlay" id="newSeasonModal">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -696,7 +784,6 @@ transition: transform 0.1s;
 </div>
 
 <!-- ELIMINATE MODAL -->
-
 <div class="overlay" id="elimModal">
   <div class="sheet" style="min-height:auto;">
     <div class="sheet-handle"></div>
@@ -711,7 +798,6 @@ transition: transform 0.1s;
 </div>
 
 <!-- END SEASON MODAL -->
-
 <div class="overlay" id="endSeasonModal">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -726,58 +812,67 @@ transition: transform 0.1s;
 </div>
 
 <!-- SETTINGS MODAL -->
-
 <div class="overlay" id="settingsModal">
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">⚙️ Settings</div>
 
-```
-<div class="section-label" style="margin-top:4px;">🔥 Season</div>
-<button class="btn btn-primary" onclick="closeModal('settingsModal'); openNewSeasonModal();">🏝️ Start New Season &amp; Draft</button>
-<div id="endSeasonWrap" style="display:none; margin-top:10px;">
-  <button class="btn btn-danger" onclick="closeModal('settingsModal'); openEndSeasonModal();">🏆 End Season &amp; Crown Winner</button>
-</div>
+    <div class="section-label" style="margin-top:4px;">🔥 Season</div>
+    <button class="btn btn-primary" onclick="closeModal('settingsModal'); openNewSeasonModal();">🏝️ Start New Season &amp; Draft</button>
+    <div id="endSeasonWrap" style="display:none; margin-top:10px;">
+      <button class="btn btn-danger" onclick="closeModal('settingsModal'); openEndSeasonModal();">🏆 End Season &amp; Crown Winner</button>
+    </div>
 
-<div class="divider"></div>
+    <div class="divider"></div>
 
-<div class="section-label">🌴 Tribe Members</div>
-<div class="advanced-toggle" onclick="toggleTribeMembers()" style="margin-bottom:0;">
-  <span>Manage Tribe Members</span>
-  <span class="advanced-chevron" id="tribeMembersChevron">›</span>
-</div>
-<div id="tribeMembersPanel" style="display:none; margin-top:14px;">
-  <div id="psListEl"></div>
-  <button class="add-row-btn" onclick="addPlayerRow()" style="margin-top:6px;">+ Add Member</button>
-  <div style="margin-top:16px;">
-    <button class="btn btn-secondary" onclick="savePlayers()">Save Members</button>
+    <div class="section-label">🌴 Tribe Members</div>
+    <div class="advanced-toggle" onclick="toggleTribeMembers()" style="margin-bottom:0;">
+      <span>Manage Tribe Members</span>
+      <span class="advanced-chevron" id="tribeMembersChevron">›</span>
+    </div>
+    <div id="tribeMembersPanel" style="display:none; margin-top:14px;">
+      <div id="psListEl"></div>
+      <button class="add-row-btn" onclick="addPlayerRow()" style="margin-top:6px;">+ Add Member</button>
+      <div style="margin-top:16px;">
+        <button class="btn btn-secondary" onclick="savePlayers()">Save Members</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="advanced-toggle" onclick="toggleAdvanced()">
+      <span>Advanced</span>
+      <span class="advanced-chevron" id="advancedChevron">›</span>
+    </div>
+    <div id="advancedPanel" style="display:none; margin-top:14px;">
+      <div class="section-label">🌴 Apps Script URL</div>
+      <div class="form-group">
+        <input type="text" class="form-input" id="scriptUrlInput" placeholder="Paste your Apps Script URL" style="font-size:12px;">
+      </div>
+      <button class="btn btn-secondary" onclick="saveScriptUrl()">Save URL</button>
+    </div>
+
+    <div style="margin-top:24px;">
+      <button class="btn btn-secondary" onclick="closeModal('settingsModal')">Close</button>
+    </div>
   </div>
 </div>
 
-<div class="divider"></div>
-
-<div class="advanced-toggle" onclick="toggleAdvanced()">
-  <span>Advanced</span>
-  <span class="advanced-chevron" id="advancedChevron">›</span>
-</div>
-<div id="advancedPanel" style="display:none; margin-top:14px;">
-  <div class="section-label">🌴 Apps Script URL</div>
-  <div class="form-group">
-    <input type="text" class="form-input" id="scriptUrlInput" placeholder="Paste your Apps Script URL" style="font-size:12px;">
-  </div>
-  <button class="btn btn-secondary" onclick="saveScriptUrl()">Save URL</button>
-</div>
-
-<div style="margin-top:24px;">
-  <button class="btn btn-secondary" onclick="closeModal('settingsModal')">Close</button>
-</div>
-```
-
+<!-- WINNER SHARE MODAL -->
+<div class="overlay" id="winnerShareModal">
+  <div class="sheet" style="min-height:auto;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🏆 Season Complete!</div>
+    <div class="sheet-sub" id="winnerShareSub">Share the winner announcement with your tribe</div>
+    <div style="text-align:center;padding:20px 0;">
+      <span style="font-size:64px;filter:drop-shadow(0 0 20px gold);">🏆</span>
+    </div>
+    <button class="btn btn-primary" onclick="doShareWinnerLink()" style="margin-bottom:10px;">🔗 Share Winner Announcement</button>
+    <button class="btn btn-secondary" onclick="closeModal('winnerShareModal');switchTab('history');">View History →</button>
   </div>
 </div>
 
 <!-- DRAFT OVERLAY -->
-
 <div id="draftOverlay">
   <button class="draft-skip-btn" id="draftSkipBtn" onclick="skipDraft()">Skip →</button>
   <button class="draft-mute-btn" id="draftMuteBtn" onclick="toggleMute()" style="display:none;">🔊</button>
@@ -801,7 +896,6 @@ transition: transform 0.1s;
 </div>
 
 <!-- REPLAY OVERLAY -->
-
 <div id="replayOverlay">
   <!-- Title Screen -->
   <div class="replay-title-screen" id="replayTitleScreen">
@@ -838,7 +932,7 @@ let draft = { assignments:[], flatPicks:[], pickIndex:0, seasonName:'', timer:nu
 
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('scriptUrlInput').value = getScriptUrl();
-  if (!checkReplayMode()) {
+  if (!checkReplayMode() && !checkWinnerMode()) {
     loadData();
   }
 });
@@ -1035,6 +1129,12 @@ function setPlayerFilter(player) {
   renderCurrent();
 }
 
+function doShareWinnerLink() {
+  const w = window._lastWinner;
+  if (!w) return;
+  shareWinnerLink(w.seasonName, w.winnerPlayer, w.winnerContestant, w.allContestants);
+}
+
 // ── RENDER HISTORY ──
 function renderHistory() {
   const el = document.getElementById('historyContent');
@@ -1043,14 +1143,25 @@ function renderHistory() {
     el.innerHTML=`<div class="empty"><span class="empty-icon">📜</span><p>No completed seasons yet.<br>Your history will be written here.</p></div>`;
     return;
   }
-  el.innerHTML = past.map(s => `
+  el.innerHTML = past.map(s => {
+    // Build contestant list from teams for share link
+    const allC = [];
+    state.players.forEach((player,pi)=>{
+      (s.teams[player]||[]).forEach(c=>allC.push({name:c.name,player,pi,eliminated:c.eliminated}));
+    });
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify({
+      s:s.name, wp:s.winnerPlayer, wc:s.winnerContestant, all:allC
+    }))));
+    const shareUrl = `${window.location.origin}${window.location.pathname}?winner=${encoded}`;
+    return `
     <div class="history-card">
       <div class="h-trophy">🏆</div>
       <div class="h-det">
         <div class="h-name">${s.name}</div>
         <div class="h-winner"><strong>${s.winnerPlayer||'—'}</strong> · ${s.winnerContestant||'—'}</div>
       </div>
-    </div>`).join('');
+      <button class="share-history-btn" onclick="copyToClipboard('${shareUrl.replace(/'/g,"\\'")}')">🔗</button>
+    </div>`}).join('');
 }
 
 // ── RENDER TRIBE ──
@@ -1387,12 +1498,35 @@ function openEndSeasonModal() {
 }
 async function confirmEndSeason() {
   if (!selectedWinner) { showToast('⚠️ Select the winning contestant'); return; }
+
+  // Collect full cast for winner reveal animation
+  const allContestants = [];
+  state.players.forEach((player, pi) => {
+    (state.currentSeason.teams[player]||[]).forEach(c => {
+      allContestants.push({ name: c.name, player, pi, eliminated: c.eliminated });
+    });
+  });
+
   try {
-    await fetch(getScriptUrl(), { method:'POST', body:JSON.stringify({ action:'endSeason', seasonId:state.currentSeason.id, winnerPlayer:selectedWinner.player, winnerContestant:selectedWinner.contestant }) });
+    await fetch(getScriptUrl(), { method:'POST', body:JSON.stringify({
+      action:'endSeason', seasonId:state.currentSeason.id,
+      winnerPlayer:selectedWinner.player, winnerContestant:selectedWinner.contestant
+    })});
     closeModal('endSeasonModal');
-    showToast(`🏆 ${selectedWinner.player} wins the season!`);
-    await loadData(); switchTab('history');
+    await loadData();
+
+    // Show winner share sheet
+    openWinnerShareSheet(
+      state.seasons.find(s=>s.status==='completed' && s.winnerPlayer===selectedWinner.player)?.name || '',
+      selectedWinner.player, selectedWinner.contestant, allContestants
+    );
   } catch(e) { showToast('⚠️ Error ending season'); }
+}
+
+function openWinnerShareSheet(seasonName, winnerPlayer, winnerContestant, allContestants) {
+  // Stash for share
+  window._lastWinner = { seasonName, winnerPlayer, winnerContestant, allContestants };
+  openModal('winnerShareModal');
 }
 
 // ── SETTINGS ──
@@ -1465,26 +1599,422 @@ document.querySelectorAll('.overlay').forEach(o=>{
   o.addEventListener('click', e=>{ if(e.target===o) closeModal(o.id); });
 });
 
+function copyToClipboard(text) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => showToast('🔗 Link copied!'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('🔗 Link copied!');
+  }
+}
+
 // ── TOAST ──
 function showToast(msg) {
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 2800);
 }
 
-// ══════════════════════════════════════════════
-// DRAFT MUSIC ENGINE — Web Audio API
-// Orchestral + tribal: strings, brass stabs,
-// tribal drums, torch hit sfx
-// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// SURVIVOR MUSIC ENGINE — Web Audio API
+// Opening theme DNA: tribal chanting, taiko drums,
+// orchestral strings. Used for both draft + winner reveal.
+// ══════════════════════════════════════════════════════
 let audioCtx = null;
 let masterGain = null;
 let musicMuted = false;
-let drumLoop = null;
-let stringLoop = null;
 let musicNodes = [];
-let musicStartTime = 0;
-let pickCount = 0;
-let totalPicks = 0;
+let schedulerTimer = null;
+let currentBar = 0;
+let nextBarTime = 0;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  masterGain.connect(audioCtx.destination);
+}
+
+function resumeAudio() {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function toggleMute() {
+  musicMuted = !musicMuted;
+  const btn = document.getElementById('draftMuteBtn');
+  if (btn) btn.textContent = musicMuted ? '🔇' : '🔊';
+  if (masterGain) {
+    masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+    masterGain.gain.setTargetAtTime(musicMuted ? 0 : 0.8, audioCtx.currentTime, 0.3);
+  }
+}
+
+// ── Low-level helpers ──
+function node_osc(type, freq, t, dur, vol, detune=0) {
+  const osc = audioCtx.createOscillator();
+  const g   = audioCtx.createGain();
+  osc.type  = type;
+  osc.frequency.setValueAtTime(freq, t);
+  if (detune) osc.detune.setValueAtTime(detune, t);
+  osc.connect(g); g.connect(masterGain);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.03);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  osc.start(t); osc.stop(t + dur + 0.05);
+  musicNodes.push(osc, g);
+}
+
+function node_noise(t, dur, vol, cutoff=900) {
+  const len  = Math.ceil(audioCtx.sampleRate * Math.min(dur, 2));
+  const buf  = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const d    = buf.getChannelData(0);
+  for (let i=0;i<len;i++) d[i] = Math.random()*2-1;
+  const src  = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const flt  = audioCtx.createBiquadFilter();
+  flt.type   = 'lowpass';
+  flt.frequency.setValueAtTime(cutoff, t);
+  const g    = audioCtx.createGain();
+  src.connect(flt); flt.connect(g); g.connect(masterGain);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.start(t); src.stop(t + dur + 0.05);
+  musicNodes.push(src, g);
+}
+
+// ── Tribal chant voice (synthesized "AH" vowel) ──
+// Uses a stack of oscillators with vibrato to mimic massed vocals
+function chantVoice(freq, t, dur, vol) {
+  // Fundamental + formant harmonics for "ah" vowel
+  const harmonics = [
+    [1.0,  1.00],
+    [2.0,  0.55],
+    [3.0,  0.30],
+    [4.0,  0.15],
+    [5.0,  0.08],
+  ];
+  harmonics.forEach(([mult, hVol]) => {
+    // Slow vibrato via frequency modulation
+    const osc = audioCtx.createOscillator();
+    const vib = audioCtx.createOscillator();
+    const vibG = audioCtx.createGain();
+    const g   = audioCtx.createGain();
+    osc.type  = 'sine';
+    osc.frequency.setValueAtTime(freq * mult, t);
+    // vibrato depth grows over time
+    vib.frequency.setValueAtTime(4.5 + Math.random() * 1.5, t);
+    vib.type = 'sine';
+    vibG.gain.setValueAtTime(freq * mult * 0.008, t);
+    vibG.gain.linearRampToValueAtTime(freq * mult * 0.018, t + dur * 0.4);
+    vib.connect(vibG); vibG.connect(osc.frequency);
+    osc.connect(g); g.connect(masterGain);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol * hVol, t + 0.12);  // slow attack
+    g.gain.setValueAtTime(vol * hVol, t + dur - 0.25);
+    g.gain.linearRampToValueAtTime(0, t + dur);
+    osc.start(t); osc.stop(t + dur + 0.1);
+    vib.start(t); vib.stop(t + dur + 0.1);
+    musicNodes.push(osc, vib, vibG, g);
+  });
+}
+
+// ── Taiko drum ──
+function taiko(t, vel=0.8) {
+  // Low boom body
+  const body = audioCtx.createOscillator();
+  const bodyG = audioCtx.createGain();
+  body.type = 'sine';
+  body.frequency.setValueAtTime(65, t);
+  body.frequency.exponentialRampToValueAtTime(28, t + 0.25);
+  bodyG.gain.setValueAtTime(vel, t);
+  bodyG.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+  body.connect(bodyG); bodyG.connect(masterGain);
+  body.start(t); body.stop(t + 0.6);
+  musicNodes.push(body, bodyG);
+  // Attack transient
+  node_noise(t, 0.04, vel * 0.6, 1800);
+  // Resonance overtone
+  node_osc('triangle', 130, t, 0.15, vel * 0.25, 0);
+}
+
+// ── Small hand drum / clave accent ──
+function clave(t, vel=0.3) {
+  node_osc('square', 900, t, 0.06, vel * 0.4, 0);
+  node_noise(t, 0.03, vel * 0.2, 3000);
+}
+
+// ── Strings sustained chord ──
+function strings(freqs, t, dur, vol=0.14) {
+  freqs.forEach(f => {
+    node_osc('sawtooth', f,      t, dur, vol,      -10);
+    node_osc('sawtooth', f,      t, dur, vol,      +10);
+    node_osc('triangle', f*0.5,  t, dur, vol*0.5,    0);
+  });
+}
+
+// ── Chant melody line (Am pentatonic: A C D E G) ──
+// Voiced as a unison choir phrase
+const CHANT_NOTES = [220, 261.6, 293.7, 329.6, 392]; // A3 C4 D4 E4 G4
+const CHANT_PHRASE = [0,2,1,0,3,2,4,3,2,0]; // indices into CHANT_NOTES
+
+// Chord progression — Am / F / C / E
+const CHORDS = [
+  [220, 261.6, 329.6],       // Am
+  [174.6, 220, 261.6],       // F
+  [261.6, 329.6, 392],       // C
+  [164.8, 220, 246.9, 329.6],// E7 (tension)
+];
+
+// Drum pattern: [offset, vel, type] type: 'taiko'|'clave'
+const DRUM_PAT = [
+  [0,    0.85, 'taiko'],
+  [0.5,  0.25, 'clave'],
+  [1.0,  0.60, 'taiko'],
+  [1.33, 0.20, 'clave'],
+  [1.5,  0.35, 'clave'],
+  [2.0,  0.70, 'taiko'],
+  [2.5,  0.25, 'clave'],
+  [3.0,  0.80, 'taiko'],
+  [3.5,  0.20, 'clave'],
+];
+const BAR = 3.6; // seconds per bar (≈ 66bpm for tribal feel)
+
+function scheduleBar(barIdx, t) {
+  const chord = CHORDS[barIdx % CHORDS.length];
+  // Drums
+  DRUM_PAT.forEach(([off, vel, type]) => {
+    if (type === 'taiko') taiko(t + off, vel);
+    else clave(t + off, vel);
+  });
+  // Strings — slow swell in
+  strings(chord, t, BAR + 0.2, 0.12);
+  // Bass
+  node_osc('sine', chord[0] * 0.5, t, BAR, 0.20);
+  // Chant phrase — 2 voices, staggered, every other bar
+  if (barIdx % 2 === 0) {
+    CHANT_PHRASE.forEach((ni, i) => {
+      const noteT = t + (i / CHANT_PHRASE.length) * BAR * 1.8;
+      const freq  = CHANT_NOTES[ni];
+      chantVoice(freq,        noteT, 0.55, 0.10);
+      chantVoice(freq * 1.5,  noteT, 0.55, 0.05); // upper harmony
+    });
+  }
+}
+
+function scheduleMusic() {
+  const LOOK = 0.35;
+  while (nextBarTime < audioCtx.currentTime + LOOK) {
+    scheduleBar(currentBar, nextBarTime);
+    currentBar++;
+    nextBarTime += BAR;
+  }
+  schedulerTimer = setTimeout(scheduleMusic, 120);
+}
+
+function startMusic(fadeInTime=2.0) {
+  initAudio(); resumeAudio();
+  stopMusic();
+  musicNodes = [];
+  currentBar = 0;
+  nextBarTime = audioCtx.currentTime + 0.2;
+  masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+  masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  masterGain.gain.linearRampToValueAtTime(musicMuted ? 0 : 0.8, audioCtx.currentTime + fadeInTime);
+  scheduleMusic();
+}
+
+function stopMusic(fadeOut=0.6) {
+  if (schedulerTimer) { clearTimeout(schedulerTimer); schedulerTimer = null; }
+  if (masterGain && audioCtx) {
+    masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+    masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, fadeOut * 0.4);
+  }
+  setTimeout(() => {
+    musicNodes.forEach(n => { try { n.stop ? n.stop() : n.disconnect(); } catch(e){} });
+    musicNodes = [];
+  }, (fadeOut + 0.5) * 1000);
+}
+
+// ── Winner reveal swell — full choral climax ──
+function playWinnerSwell() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime + 0.1;
+  // Stop scheduler so we take over
+  if (schedulerTimer) { clearTimeout(schedulerTimer); schedulerTimer = null; }
+  // Drum roll
+  for (let i=0;i<12;i++) taiko(t + i*0.09, 0.3 + i*0.055);
+  // Full Am chord swell
+  const swell = [110, 165, 220, 261.6, 329.6, 440];
+  strings(swell, t+0.9, 5.0, 0.18);
+  // Chanting climax — all voices at once
+  CHANT_NOTES.forEach((f,i) => {
+    chantVoice(f,     t+0.9+i*0.12, 4.5, 0.14);
+    chantVoice(f*2,   t+0.9+i*0.12, 4.5, 0.07);
+  });
+  // Master swell then fade
+  masterGain.gain.cancelScheduledValues(t);
+  masterGain.gain.setValueAtTime(musicMuted ? 0 : 0.8, t);
+  masterGain.gain.linearRampToValueAtTime(musicMuted ? 0 : 1.0, t + 1.5);
+  masterGain.gain.setValueAtTime(musicMuted ? 0 : 1.0, t + 3.5);
+  masterGain.gain.linearRampToValueAtTime(0, t + 7.0);
+}
+
+// legacy aliases so existing call-sites still work
+function startDraftMusic(n) { startMusic(2.0); }
+function stopDraftMusic()    { stopMusic(0.8); }
+function onPickReveal()      { /* removed — no per-pick sfx */ }
+function onDraftComplete()   { playWinnerSwell(); }
+
+// ══════════════════════════════════════════════════════
+// WINNER REVEAL OVERLAY
+// ══════════════════════════════════════════════════════
+function buildWinnerUrl(seasonName, winnerPlayer, winnerContestant, allContestants) {
+  const payload = {
+    s: seasonName,
+    wp: winnerPlayer,
+    wc: winnerContestant,
+    all: allContestants, // [{name, player, eliminated}]
+  };
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  return `${window.location.origin}${window.location.pathname}?winner=${encoded}`;
+}
+
+function shareWinnerLink(seasonName, winnerPlayer, winnerContestant, allContestants) {
+  const url = buildWinnerUrl(seasonName, winnerPlayer, winnerContestant, allContestants);
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(() => showToast('🏆 Winner link copied!'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = url; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('🏆 Winner link copied!');
+  }
+}
+
+// Called after season ended — show share button
+function showWinnerShareBtn(seasonName, winnerPlayer, winnerContestant, allContestants) {
+  // inject a share button into the history page for this season
+  // and show a toast with share option
+  const url = buildWinnerUrl(seasonName, winnerPlayer, winnerContestant, allContestants);
+  // Brief celebration toast
+  showToast(`🏆 ${winnerPlayer} wins! Link ready to copy.`);
+}
+
+// Check URL for winner replay
+function checkWinnerMode() {
+  const params = new URLSearchParams(window.location.search);
+  const encoded = params.get('winner');
+  if (!encoded) return false;
+  try {
+    const payload = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+    launchWinnerReveal(payload);
+    return true;
+  } catch(e) { return false; }
+}
+
+function launchWinnerReveal(data) {
+  // Hide main app
+  document.querySelector('.app-header').style.display='none';
+  document.querySelector('.bottom-tabs').style.display='none';
+  document.querySelector('.scroll-area').style.display='none';
+
+  const overlay = document.getElementById('winnerRevealOverlay');
+  overlay.classList.add('open');
+
+  // Set home link
+  document.getElementById('winnerRevealHomeBtn').href =
+    window.location.origin + window.location.pathname;
+
+  // Start music immediately
+  startMusic(1.5);
+
+  // Run flame-out animation then reveal
+  runFlameAnimation(data);
+}
+
+function runFlameAnimation(data) {
+  const stage = document.getElementById('winnerFlameStage');
+  stage.innerHTML = '';
+
+  const eliminated = data.all.filter(c => c.eliminated);
+  const winner     = data.all.find(c => !c.eliminated) || { name: data.wc, player: data.wp };
+
+  // Place all names scattered on screen
+  const allNames = [...data.all];
+  allNames.forEach((c, i) => {
+    const el = document.createElement('div');
+    el.className = 'flame-name' + (c.eliminated ? '' : ' flame-winner-seed');
+    el.id = `fn-${i}`;
+    el.innerHTML = `<div class="fn-fire">🔥</div><div class="fn-text">${c.name}</div>`;
+    // Pseudo-random scatter
+    const col = i % 3;
+    const row = Math.floor(i / 3);
+    const cols = 3;
+    el.style.left = (10 + col * 30 + (row%2)*8) + '%';
+    el.style.top  = (12 + row * 18) + '%';
+    stage.appendChild(el);
+  });
+
+  // After a beat, snuff eliminated names one by one on drum hits
+  const drumInterval = BAR / DRUM_PAT.length * 1000; // ms per beat
+  let snuffIndex = 0;
+  const snuffDelay = 1200; // ms between each snuff
+
+  setTimeout(() => {
+    const snuffNext = () => {
+      if (snuffIndex >= eliminated.length) {
+        // All eliminated — pause then do winner reveal
+        setTimeout(() => showWinnerReveal(data, winner), 1200);
+        return;
+      }
+      const victim = eliminated[snuffIndex];
+      const victimEl = Array.from(document.querySelectorAll('.flame-name'))
+        .find(el => el.querySelector('.fn-text')?.textContent === victim.name);
+      if (victimEl) {
+        victimEl.classList.add('snuffed');
+        victimEl.querySelector('.fn-fire').innerHTML = SMOKE_SVG;
+      }
+      snuffIndex++;
+      setTimeout(snuffNext, snuffDelay);
+    };
+    snuffNext();
+  }, 2000);
+}
+
+function showWinnerReveal(data, winner) {
+  // Hide flame stage
+  document.getElementById('winnerFlameStage').style.display = 'none';
+
+  // Play winner swell
+  playWinnerSwell();
+
+  const reveal = document.getElementById('winnerRevealCard');
+  reveal.style.display = 'flex';
+
+  document.getElementById('wrSeasonName').textContent  = data.s;
+  document.getElementById('wrWinnerName').textContent  = data.wc;
+  document.getElementById('wrPlayerName').textContent  = data.wp;
+
+  // Find player index for avatar color
+  const pi = (data.all.find(c => c.player === data.wp) || {}).pi || 0;
+  document.getElementById('wrAvatar').className = `wr-avatar ${AV[pi % 6]}`;
+  document.getElementById('wrAvatar').textContent = initials(data.wp);
+}
+
+// ── HELPERS ──
+function shuffle(arr) {
+  for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+  return arr;
+}
+function initials(name) { return (name||'').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+function escJs(str) { return String(str).replace(/'/g,"\\'"); }
+function renderError() {
+  document.getElementById('currentContent').innerHTML=`<div class="empty"><span class="empty-icon">⚠️</span><h2>Connection Error</h2><p>Check your Apps Script URL in Settings.</p></div>`;
+  state.loaded=true; renderTribe(); renderHistory();
+}
+
 
 function initAudio() {
   if (audioCtx) return;
@@ -1557,159 +2087,6 @@ function drumHit(t, vel=0.7) {
   makeNoise(t, 0.06, vel * 0.5, 1200);
 }
 
-// ── Small accent drum ──
-function accentHit(t, vel=0.35) {
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = 'triangle';
-  o.frequency.setValueAtTime(200, t);
-  o.frequency.exponentialRampToValueAtTime(80, t + 0.1);
-  g.gain.setValueAtTime(vel, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-  o.connect(g); g.connect(masterGain);
-  o.start(t); o.stop(t + 0.22);
-  musicNodes.push(o, g);
-  makeNoise(t, 0.04, vel * 0.3, 2000);
-}
-
-// ── Sustained string chord ──
-// chord = array of [freq, gain] pairs
-function stringChord(chord, startTime, duration) {
-  chord.forEach(([freq, vel]) => {
-    // Layer 2 slightly detuned oscs for richness
-    makeOsc('sawtooth', freq, startTime, duration, vel * 0.18, -8);
-    makeOsc('sawtooth', freq, startTime, duration, vel * 0.18, +8);
-    makeOsc('triangle', freq, startTime, duration, vel * 0.12, 0);
-  });
-}
-
-// ── Brass stab ──
-function brassStab(freq, t, dur=0.5) {
-  makeOsc('sawtooth', freq,       t, dur, 0.22, 0);
-  makeOsc('sawtooth', freq * 2,   t, dur, 0.10, 5);
-  makeOsc('square',   freq * 0.5, t, dur, 0.08, -3);
-}
-
-// ── Torch reveal hit — dramatic orchestral stab ──
-function torchHit(t) {
-  // Big drum
-  drumHit(t, 0.9);
-  // Brass chord sting
-  brassStab(220, t, 0.6);   // A3
-  brassStab(277, t, 0.6);   // C#4
-  brassStab(330, t, 0.6);   // E4
-  // Shimmer noise
-  makeNoise(t, 0.08, 0.25, 4000);
-}
-
-// ── Crescendo finale ──
-function playFinale(t) {
-  // Big drum roll
-  for (let i = 0; i < 8; i++) {
-    drumHit(t + i * 0.12, 0.4 + i * 0.07);
-  }
-  // Full brass swell
-  const chord = [[130.8, 1],[164.8, 0.9],[196, 0.9],[261.6, 0.8],[329.6, 0.7]];
-  stringChord(chord, t + 0.7, 3.5);
-  [130.8, 164.8, 196, 261.6, 329.6].forEach((f, i) => {
-    brassStab(f, t + 0.7 + i * 0.07, 2.5);
-  });
-  // Fade master out
-  masterGain.gain.setTargetAtTime(0, t + 3.5, 1.2);
-}
-
-// ── Chord progression (minor, dramatic) ──
-// Am - F - C - G - Am - Dm - E - Am
-const CHORD_PROG = [
-  [[220,1],[261.6,0.85],[329.6,0.8]],          // Am
-  [[174.6,1],[220,0.85],[261.6,0.8]],           // F
-  [[261.6,1],[329.6,0.85],[392,0.8]],           // C
-  [[196,1],[246.9,0.85],[293.7,0.8]],           // G
-  [[220,1],[261.6,0.85],[329.6,0.8]],           // Am
-  [[146.8,1],[174.6,0.85],[220,0.8]],           // Dm
-  [[164.8,1],[207.7,0.85],[246.9,0.8]],         // E (V of Am — tension)
-  [[220,1],[261.6,0.85],[329.6,0.8],[440,0.5]], // Am octave — resolution
-];
-
-// ── Drum pattern (repeating 4-beat) ──
-// beats: [time_offset, velocity, isAccent]
-const DRUM_PATTERN = [
-  [0,     0.75, false],
-  [0.5,   0.30, true],
-  [1.0,   0.55, false],
-  [1.25,  0.28, true],
-  [1.5,   0.65, false],
-  [2.0,   0.35, true],
-  [2.5,   0.50, false],
-  [3.0,   0.75, false],
-  [3.5,   0.30, true],
-];
-const BEAT_DURATION = 4.0; // seconds per bar
-
-function scheduleDrumBar(barStartTime) {
-  DRUM_PATTERN.forEach(([offset, vel, isAccent]) => {
-    const t = barStartTime + offset;
-    if (isAccent) accentHit(t, vel);
-    else drumHit(t, vel);
-  });
-}
-
-function scheduleStringBar(barIndex, barStartTime) {
-  const chord = CHORD_PROG[barIndex % CHORD_PROG.length];
-  stringChord(chord, barStartTime, BEAT_DURATION + 0.3);
-  // Add bass note
-  makeOsc('sine', chord[0][0] * 0.5, barStartTime, BEAT_DURATION, 0.25, 0);
-}
-
-// Lookahead scheduler
-let schedulerTimer = null;
-let currentBar = 0;
-let nextBarTime = 0;
-
-function scheduleMusic() {
-  const lookahead = 0.3;
-  while (nextBarTime < audioCtx.currentTime + lookahead) {
-    scheduleDrumBar(nextBarTime);
-    scheduleStringBar(currentBar, nextBarTime);
-    currentBar++;
-    nextBarTime += BEAT_DURATION;
-  }
-  schedulerTimer = setTimeout(scheduleMusic, 100);
-}
-
-function startDraftMusic(numPicks) {
-  totalPicks = numPicks;
-  pickCount = 0;
-  initAudio();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  // Clear old nodes
-  stopDraftMusic();
-  musicNodes = [];
-  currentBar = 0;
-  nextBarTime = audioCtx.currentTime + 0.3;
-  scheduleMusic();
-  musicStartTime = audioCtx.currentTime;
-}
-
-function stopDraftMusic() {
-  if (schedulerTimer) { clearTimeout(schedulerTimer); schedulerTimer = null; }
-  musicNodes.forEach(n => { try { n.stop ? n.stop() : n.disconnect(); } catch(e){} });
-  musicNodes = [];
-}
-
-function onPickReveal() {
-  // Called when torch lights up — play stab
-  if (!audioCtx || musicMuted) return;
-  pickCount++;
-  torchHit(audioCtx.currentTime + 0.05);
-}
-
-function onDraftComplete() {
-  if (!audioCtx) return;
-  if (schedulerTimer) { clearTimeout(schedulerTimer); schedulerTimer = null; }
-  playFinale(audioCtx.currentTime + 0.1);
-}
-
 // ── HELPERS ──
 function shuffle(arr) {
   for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
@@ -1722,6 +2099,26 @@ function renderError() {
   state.loaded=true; renderTribe(); renderHistory();
 }
 </script>
+
+<!-- WINNER REVEAL OVERLAY -->
+<div id="winnerRevealOverlay">
+  <div id="winnerFlameStage"></div>
+  <div id="winnerRevealCard">
+    <div class="wr-eyebrow">Survivor</div>
+    <div class="wr-season" id="wrSeasonName"></div>
+    <span class="wr-trophy">🏆</span>
+    <div class="wr-sole-survivor">The Sole Survivor</div>
+    <div class="wr-winner-name" id="wrWinnerName"></div>
+    <div class="wr-player-row">
+      <div class="wr-avatar" id="wrAvatar"></div>
+      <div>
+        <div class="wr-player-label">Team</div>
+        <div class="wr-player-name" id="wrPlayerName"></div>
+      </div>
+    </div>
+    <a class="wr-home-btn" id="winnerRevealHomeBtn" href="#">🏝️ View Live Tracker</a>
+  </div>
+</div>
 
 </body>
 </html>
