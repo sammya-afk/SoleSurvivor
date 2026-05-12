@@ -686,6 +686,19 @@ body::before {
 }
 .winner-end-btn:active { transform: scale(0.97); }
 .winner-still-in { margin-top: 24px; width: 100%; }
+.flame-winner-pulse .fn-fire {
+  animation: winnerPulse 0.6s ease-in-out infinite alternate !important;
+  font-size: 32px !important;
+}
+@keyframes winnerPulse {
+  0%   { transform: scale(1);   filter: drop-shadow(0 0 12px var(--torch)); }
+  100% { transform: scale(1.5); filter: drop-shadow(0 0 32px gold); }
+}
+@keyframes confettiFall {
+  0%   { transform: translateY(0) rotate(0deg);       opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg);  opacity: 0; }
+}
 ::-webkit-scrollbar{width:3px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
 </style>
 </head>
@@ -1941,66 +1954,121 @@ function runFlameAnimation(data) {
   const eliminated = data.all.filter(c => c.eliminated);
   const winner     = data.all.find(c => !c.eliminated) || { name: data.wc, player: data.wp };
 
-  // Place all names scattered on screen
+  // Place all names scattered on screen in a grid
   const allNames = [...data.all];
+  const cols = 3;
   allNames.forEach((c, i) => {
     const el = document.createElement('div');
-    el.className = 'flame-name' + (c.eliminated ? '' : ' flame-winner-seed');
-    el.id = `fn-${i}`;
-    el.innerHTML = `<div class="fn-fire">🔥</div><div class="fn-text">${c.name}</div>`;
-    // Pseudo-random scatter
-    const col = i % 3;
-    const row = Math.floor(i / 3);
-    const cols = 3;
-    el.style.left = (10 + col * 30 + (row%2)*8) + '%';
-    el.style.top  = (12 + row * 18) + '%';
+    el.className = 'flame-name' + (!c.eliminated ? ' flame-winner-seed' : '');
+    el.innerHTML = `<div class="fn-fire">${!c.eliminated ? '🔥' : '🔥'}</div><div class="fn-text">${c.name}</div>`;
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    el.style.left = (8 + col * 31 + (row % 2 ? 5 : 0)) + '%';
+    el.style.top  = (10 + row * 16) + '%';
     stage.appendChild(el);
   });
 
-  // After a beat, snuff eliminated names one by one on drum hits
-  const drumInterval = BAR / DRUM_PAT.length * 1000; // ms per beat
+  // Snuff eliminated names — faster, 500ms apart synced to drums
+  const SNUFF_INTERVAL = 500;
   let snuffIndex = 0;
-  const snuffDelay = 1200; // ms between each snuff
 
-  setTimeout(() => {
-    const snuffNext = () => {
-      if (snuffIndex >= eliminated.length) {
-        // All eliminated — pause then do winner reveal
-        setTimeout(() => showWinnerReveal(data, winner), 1200);
-        return;
+  const snuffNext = () => {
+    if (snuffIndex >= eliminated.length) {
+      // Brief dramatic pause — winner torch pulses alone
+      const winnerEl = Array.from(document.querySelectorAll('.flame-name.flame-winner-seed'))[0];
+      if (winnerEl) {
+        winnerEl.classList.add('flame-winner-pulse');
       }
-      const victim = eliminated[snuffIndex];
-      const victimEl = Array.from(document.querySelectorAll('.flame-name'))
-        .find(el => el.querySelector('.fn-text')?.textContent === victim.name);
-      if (victimEl) {
+      setTimeout(() => showWinnerReveal(data, winner), 1800);
+      return;
+    }
+    const victim = eliminated[snuffIndex];
+    const allEls = Array.from(document.querySelectorAll('.flame-name'));
+    const victimEl = allEls.find(el => el.querySelector('.fn-text')?.textContent === victim.name);
+    if (victimEl) {
+      // Flash bright then snuff
+      const fire = victimEl.querySelector('.fn-fire');
+      fire.style.transition = 'opacity 0.15s';
+      fire.textContent = '💥';
+      setTimeout(() => {
         victimEl.classList.add('snuffed');
-        victimEl.querySelector('.fn-fire').innerHTML = SMOKE_SVG;
-      }
-      snuffIndex++;
-      setTimeout(snuffNext, snuffDelay);
-    };
-    snuffNext();
-  }, 2000);
+        fire.innerHTML = SMOKE_SVG;
+      }, 150);
+    }
+    snuffIndex++;
+    setTimeout(snuffNext, SNUFF_INTERVAL);
+  };
+
+  // Start after short music intro
+  setTimeout(snuffNext, 1500);
 }
 
 function showWinnerReveal(data, winner) {
-  // Hide flame stage
-  document.getElementById('winnerFlameStage').style.display = 'none';
+  const stage = document.getElementById('winnerFlameStage');
+
+  // Dramatic flash — screen whites out then fades to winner
+  const flash = document.createElement('div');
+  flash.style.cssText = 'position:absolute;inset:0;background:white;opacity:0;transition:opacity 0.12s;z-index:10;pointer-events:none;';
+  stage.appendChild(flash);
+  void flash.offsetWidth;
+  flash.style.opacity = '0.9';
+  setTimeout(() => {
+    flash.style.transition = 'opacity 0.6s';
+    flash.style.opacity = '0';
+    setTimeout(() => flash.remove(), 700);
+  }, 120);
+
+  // Hide stage names
+  setTimeout(() => { stage.style.transition = 'opacity 0.5s'; stage.style.opacity = '0'; }, 200);
 
   // Play winner swell
   playWinnerSwell();
 
-  const reveal = document.getElementById('winnerRevealCard');
-  reveal.style.display = 'flex';
+  // Show winner card
+  setTimeout(() => {
+    stage.style.display = 'none';
+    const reveal = document.getElementById('winnerRevealCard');
+    reveal.style.display = 'flex';
 
-  document.getElementById('wrSeasonName').textContent  = data.s;
-  document.getElementById('wrWinnerName').textContent  = data.wc;
-  document.getElementById('wrPlayerName').textContent  = data.wp;
+    document.getElementById('wrSeasonName').textContent = data.s;
+    document.getElementById('wrWinnerName').textContent = data.wc;
+    document.getElementById('wrPlayerName').textContent = data.wp;
 
-  // Find player index for avatar color
-  const pi = (data.all.find(c => c.player === data.wp) || {}).pi || 0;
-  document.getElementById('wrAvatar').className = `wr-avatar ${AV[pi % 6]}`;
-  document.getElementById('wrAvatar').textContent = initials(data.wp);
+    const pi = (data.all.find(c => c.player === data.wp) || {}).pi || 0;
+    document.getElementById('wrAvatar').className = `wr-avatar ${AV[pi % 6]}`;
+    document.getElementById('wrAvatar').textContent = initials(data.wp);
+
+    // Trigger confetti burst
+    launchConfetti();
+  }, 350);
+}
+
+// Simple CSS confetti burst
+function launchConfetti() {
+  const container = document.getElementById('winnerRevealOverlay');
+  const colors = ['#ff6b1a','#ffd700','#ff9a3c','#e8d5a3','#4cb86a','#ff4444'];
+  for (let i = 0; i < 60; i++) {
+    const p = document.createElement('div');
+    const color = colors[i % colors.length];
+    const size  = 6 + Math.random() * 8;
+    const x     = 20 + Math.random() * 60; // % from left
+    const delay = Math.random() * 0.8;
+    const dur   = 1.5 + Math.random() * 1.5;
+    const rot   = Math.random() * 720;
+    p.style.cssText = `
+      position:absolute;
+      left:${x}%; top:-10px;
+      width:${size}px; height:${size}px;
+      background:${color};
+      border-radius:${Math.random() > 0.5 ? '50%' : '2px'};
+      opacity:1;
+      pointer-events:none;
+      z-index:20;
+      animation: confettiFall ${dur}s ${delay}s ease-in forwards;
+    `;
+    container.appendChild(p);
+    setTimeout(() => p.remove(), (delay + dur + 0.2) * 1000);
+  }
 }
 
 // ── HELPERS ──
@@ -2015,89 +2083,6 @@ function renderError() {
   state.loaded=true; renderTribe(); renderHistory();
 }
 
-
-function initAudio() {
-  if (audioCtx) return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  masterGain = audioCtx.createGain();
-  masterGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
-  masterGain.gain.linearRampToValueAtTime(0.85, audioCtx.currentTime + 2.5);
-  masterGain.connect(audioCtx.destination);
-}
-
-function toggleMute() {
-  musicMuted = !musicMuted;
-  document.getElementById('draftMuteBtn').textContent = musicMuted ? '🔇' : '🔊';
-  if (masterGain) {
-    masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
-    masterGain.gain.setTargetAtTime(musicMuted ? 0 : 0.85, audioCtx.currentTime, 0.3);
-  }
-}
-
-// ── Helpers ──
-function makeOsc(type, freq, startTime, duration, gainVal, detune=0) {
-  const osc = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, startTime);
-  if (detune) osc.detune.setValueAtTime(detune, startTime);
-  osc.connect(g); g.connect(masterGain);
-  g.gain.setValueAtTime(0, startTime);
-  g.gain.linearRampToValueAtTime(gainVal, startTime + 0.04);
-  g.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-  osc.start(startTime);
-  osc.stop(startTime + duration + 0.05);
-  musicNodes.push(osc, g);
-  return { osc, g };
-}
-
-function makeNoise(startTime, duration, gainVal, filterFreq=800) {
-  const bufSize = audioCtx.sampleRate * Math.min(duration, 2);
-  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
-  const src = audioCtx.createBufferSource();
-  src.buffer = buf;
-  const filter = audioCtx.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.setValueAtTime(filterFreq, startTime);
-  const g = audioCtx.createGain();
-  src.connect(filter); filter.connect(g); g.connect(masterGain);
-  g.gain.setValueAtTime(gainVal, startTime);
-  g.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-  src.start(startTime);
-  src.stop(startTime + duration + 0.05);
-  musicNodes.push(src, g);
-}
-
-// ── Deep tribal drum hit ──
-function drumHit(t, vel=0.7) {
-  // Body — low sine boom
-  const body = audioCtx.createOscillator();
-  const bodyG = audioCtx.createGain();
-  body.type = 'sine';
-  body.frequency.setValueAtTime(80, t);
-  body.frequency.exponentialRampToValueAtTime(30, t + 0.18);
-  bodyG.gain.setValueAtTime(vel, t);
-  bodyG.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-  body.connect(bodyG); bodyG.connect(masterGain);
-  body.start(t); body.stop(t + 0.4);
-  musicNodes.push(body, bodyG);
-  // Snap — noise transient
-  makeNoise(t, 0.06, vel * 0.5, 1200);
-}
-
-// ── HELPERS ──
-function shuffle(arr) {
-  for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
-  return arr;
-}
-function initials(name) { return (name||'').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
-function escJs(str) { return String(str).replace(/'/g,"\\'"); }
-function renderError() {
-  document.getElementById('currentContent').innerHTML=`<div class="empty"><span class="empty-icon">⚠️</span><h2>Connection Error</h2><p>Check your Apps Script URL in Manage.</p></div>`;
-  state.loaded=true; renderTribe(); renderHistory();
-}
 </script>
 
 <!-- WINNER REVEAL OVERLAY -->
