@@ -1142,13 +1142,6 @@ function setPlayerFilter(player) {
   renderCurrent();
 }
 
-function doShareWinnerLink() {
-  const w = window._lastWinner;
-  if (!w) return;
-  shareWinnerLink(w.seasonName, w.winnerPlayer, w.winnerContestant, w.allContestants);
-}
-
-// ── RENDER HISTORY ──
 function renderHistory() {
   const el = document.getElementById('historyContent');
   const past = state.seasons.filter(s=>s.status==='completed').sort((a,b)=>b.id-a.id);
@@ -1157,14 +1150,16 @@ function renderHistory() {
     return;
   }
   el.innerHTML = past.map(s => {
-    // Build contestant list from teams for share link
     const allC = [];
     state.players.forEach((player,pi)=>{
-      (s.teams[player]||[]).forEach(c=>allC.push({name:c.name,player,pi,eliminated:c.eliminated}));
+      (s.teams[player]||[]).forEach(c=>{
+        // Winner is NOT eliminated — ensure flag is correct
+        const isWinner = (c.name === s.winnerContestant && player === s.winnerPlayer);
+        allC.push({ name:c.name, player, pi, eliminated: isWinner ? false : !!c.eliminated });
+      });
     });
-    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify({
-      s:s.name, wp:s.winnerPlayer, wc:s.winnerContestant, all:allC
-    }))));
+    const payload = { s:s.name, wp:s.winnerPlayer, wc:s.winnerContestant, all:allC };
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
     const shareUrl = `${window.location.origin}${window.location.pathname}?winner=${encoded}`;
     return `
     <div class="history-card">
@@ -1173,8 +1168,9 @@ function renderHistory() {
         <div class="h-name">${s.name}</div>
         <div class="h-winner"><strong>${s.winnerPlayer||'—'}</strong> · ${s.winnerContestant||'—'}</div>
       </div>
-      <button class="share-history-btn" onclick="copyToClipboard('${shareUrl.replace(/'/g,"\\'")}')">🔗</button>
-    </div>`}).join('');
+      <button class="share-history-btn" onclick="copyToClipboard('${shareUrl.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">🔗</button>
+    </div>`;
+  }).join('');
 }
 
 // ── RENDER TRIBE ──
@@ -1512,28 +1508,39 @@ function openEndSeasonModal() {
 async function confirmEndSeason() {
   if (!selectedWinner) { showToast('⚠️ Select the winning contestant'); return; }
 
-  // Collect full cast for winner reveal animation
+  const seasonId   = state.currentSeason.id;
+  const seasonName = state.currentSeason.name;
+
+  // Collect full cast before fetch
   const allContestants = [];
   state.players.forEach((player, pi) => {
     (state.currentSeason.teams[player]||[]).forEach(c => {
-      allContestants.push({ name: c.name, player, pi, eliminated: c.eliminated });
+      allContestants.push({
+        name: c.name, player, pi,
+        eliminated: !!c.eliminated
+      });
     });
+  });
+  // Make sure winner is explicitly marked not-eliminated
+  allContestants.forEach(c => {
+    if (c.name === selectedWinner.contestant) c.eliminated = false;
   });
 
   try {
-    await fetch(getScriptUrl(), { method:'POST', body:JSON.stringify({
-      action:'endSeason', seasonId:state.currentSeason.id,
-      winnerPlayer:selectedWinner.player, winnerContestant:selectedWinner.contestant
+    const res = await fetch(getScriptUrl(), { method:'POST', body:JSON.stringify({
+      action:'endSeason', seasonId,
+      winnerPlayer: selectedWinner.player,
+      winnerContestant: selectedWinner.contestant
     })});
+    const json = await res.json();
+    if (json.error) { showToast('⚠️ ' + json.error); return; }
+
     closeModal('endSeasonModal');
     await loadData();
-
-    // Show winner share sheet
-    openWinnerShareSheet(
-      state.seasons.find(s=>s.status==='completed' && s.winnerPlayer===selectedWinner.player)?.name || '',
-      selectedWinner.player, selectedWinner.contestant, allContestants
-    );
-  } catch(e) { showToast('⚠️ Error ending season'); }
+    openWinnerShareSheet(seasonName, selectedWinner.player, selectedWinner.contestant, allContestants);
+  } catch(e) {
+    showToast('⚠️ Error: ' + e.message);
+  }
 }
 
 function openWinnerShareSheet(seasonName, winnerPlayer, winnerContestant, allContestants) {
@@ -1828,10 +1835,13 @@ function scheduleMusic() {
 
 function startMusic(fadeInTime=2.0) {
   initAudio(); resumeAudio();
-  stopMusic();
+  // Cancel any existing scheduler
+  if (schedulerTimer) { clearTimeout(schedulerTimer); schedulerTimer = null; }
+  // Stop old nodes cleanly without nuking gain
+  musicNodes.forEach(n => { try { n.stop ? n.stop() : n.disconnect(); } catch(e){} });
   musicNodes = [];
   currentBar = 0;
-  nextBarTime = audioCtx.currentTime + 0.2;
+  nextBarTime = audioCtx.currentTime + 0.15;
   masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
   masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
   masterGain.gain.linearRampToValueAtTime(musicMuted ? 0 : 0.8, audioCtx.currentTime + fadeInTime);
@@ -1979,7 +1989,7 @@ function runFlameAnimation(data) {
       if (winnerEl) {
         winnerEl.classList.add('flame-winner-pulse');
       }
-      setTimeout(() => showWinnerReveal(data, winner), 1800);
+      setTimeout(() => showWinnerReveal(data), 1800);
       return;
     }
     const victim = eliminated[snuffIndex];
@@ -2003,25 +2013,31 @@ function runFlameAnimation(data) {
   setTimeout(snuffNext, 1500);
 }
 
-function showWinnerReveal(data, winner) {
+function doShareWinnerLink() {
+  const w = window._lastWinner;
+  if (!w) return;
+  shareWinnerLink(w.seasonName, w.winnerPlayer, w.winnerContestant, w.allContestants);
+}
+
+function showWinnerReveal(data) {
   const stage = document.getElementById('winnerFlameStage');
 
-  // Dramatic flash — screen whites out then fades to winner
+  // White flash
   const flash = document.createElement('div');
   flash.style.cssText = 'position:absolute;inset:0;background:white;opacity:0;transition:opacity 0.12s;z-index:10;pointer-events:none;';
   stage.appendChild(flash);
   void flash.offsetWidth;
-  flash.style.opacity = '0.9';
+  flash.style.opacity = '0.85';
   setTimeout(() => {
-    flash.style.transition = 'opacity 0.6s';
+    flash.style.transition = 'opacity 0.7s';
     flash.style.opacity = '0';
-    setTimeout(() => flash.remove(), 700);
-  }, 120);
+    setTimeout(() => flash.remove(), 800);
+  }, 130);
 
-  // Hide stage names
-  setTimeout(() => { stage.style.transition = 'opacity 0.5s'; stage.style.opacity = '0'; }, 200);
+  // Fade out stage
+  setTimeout(() => { stage.style.transition='opacity 0.5s'; stage.style.opacity='0'; }, 200);
 
-  // Play winner swell
+  // Play swell
   playWinnerSwell();
 
   // Show winner card
@@ -2030,17 +2046,20 @@ function showWinnerReveal(data, winner) {
     const reveal = document.getElementById('winnerRevealCard');
     reveal.style.display = 'flex';
 
-    document.getElementById('wrSeasonName').textContent = data.s;
-    document.getElementById('wrWinnerName').textContent = data.wc;
-    document.getElementById('wrPlayerName').textContent = data.wp;
+    // Always use data.wc / data.wp directly — most reliable
+    document.getElementById('wrSeasonName').textContent = data.s || '';
+    document.getElementById('wrWinnerName').textContent = data.wc || '';
+    document.getElementById('wrPlayerName').textContent = data.wp || '';
 
-    const pi = (data.all.find(c => c.player === data.wp) || {}).pi || 0;
-    document.getElementById('wrAvatar').className = `wr-avatar ${AV[pi % 6]}`;
-    document.getElementById('wrAvatar').textContent = initials(data.wp);
+    // Avatar — find pi from allContestants, fallback to 0
+    const winnerEntry = (data.all||[]).find(c => c.name === data.wc && c.player === data.wp);
+    const pi = winnerEntry ? (winnerEntry.pi || 0) : 0;
+    const av = document.getElementById('wrAvatar');
+    av.className = `wr-avatar ${AV[pi % 6]}`;
+    av.textContent = initials(data.wp || '');
 
-    // Trigger confetti burst
     launchConfetti();
-  }, 350);
+  }, 380);
 }
 
 // Simple CSS confetti burst
