@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -621,86 +622,87 @@ body::before {
 
 /* WINNER CELEBRATION */
 .winner-banner {
-  text-align: center;
-  padding: 32px 20px 24px;
-  animation: rowIn 0.5s cubic-bezier(0.16,1,0.3,1) both;
+text-align: center;
+padding: 32px 20px 24px;
+animation: rowIn 0.5s cubic-bezier(0.16,1,0.3,1) both;
 }
 .winner-confetti {
-  font-size: 56px;
-  display: block;
-  margin-bottom: 4px;
-  animation: confettiBounce 1.2s cubic-bezier(0.34,1.56,0.64,1) both;
+font-size: 56px;
+display: block;
+margin-bottom: 4px;
+animation: confettiBounce 1.2s cubic-bezier(0.34,1.56,0.64,1) both;
 }
 @keyframes confettiBounce {
-  0% { transform: scale(0) rotate(-10deg); opacity: 0; }
-  60% { transform: scale(1.15) rotate(4deg); opacity: 1; }
-  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+0% { transform: scale(0) rotate(-10deg); opacity: 0; }
+60% { transform: scale(1.15) rotate(4deg); opacity: 1; }
+100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 .winner-trophy {
-  font-size: 80px;
-  display: block;
-  margin: 0 auto 16px;
-  filter: drop-shadow(0 0 28px rgba(255,215,0,0.6));
-  animation: trophyPulse 2s ease-in-out infinite alternate;
+font-size: 80px;
+display: block;
+margin: 0 auto 16px;
+filter: drop-shadow(0 0 28px rgba(255,215,0,0.6));
+animation: trophyPulse 2s ease-in-out infinite alternate;
 }
 @keyframes trophyPulse {
-  0% { filter: drop-shadow(0 0 16px rgba(255,215,0,0.4)); transform: scale(1); }
-  100% { filter: drop-shadow(0 0 36px rgba(255,215,0,0.8)); transform: scale(1.06); }
+0% { filter: drop-shadow(0 0 16px rgba(255,215,0,0.4)); transform: scale(1); }
+100% { filter: drop-shadow(0 0 36px rgba(255,215,0,0.8)); transform: scale(1.06); }
 }
 .winner-label {
-  font-family: 'Cinzel', serif;
-  font-size: 11px; letter-spacing: 4px; text-transform: uppercase;
-  color: var(--text2); margin-bottom: 6px;
+font-family: ‘Cinzel’, serif;
+font-size: 11px; letter-spacing: 4px; text-transform: uppercase;
+color: var(–text2); margin-bottom: 6px;
 }
 .winner-player-name {
-  font-family: 'Cinzel', serif;
-  font-size: 32px; font-weight: 900;
-  color: gold;
-  text-shadow: 0 0 32px rgba(255,215,0,0.6);
-  margin-bottom: 4px;
-  animation: goldShimmer 2.5s ease-in-out infinite alternate;
+font-family: ‘Cinzel’, serif;
+font-size: 32px; font-weight: 900;
+color: gold;
+text-shadow: 0 0 32px rgba(255,215,0,0.6);
+margin-bottom: 4px;
+animation: goldShimmer 2.5s ease-in-out infinite alternate;
 }
 @keyframes goldShimmer {
-  0% { text-shadow: 0 0 20px rgba(255,215,0,0.5); }
-  100% { text-shadow: 0 0 40px rgba(255,215,0,0.9), 0 0 60px rgba(255,165,0,0.4); }
+0% { text-shadow: 0 0 20px rgba(255,215,0,0.5); }
+100% { text-shadow: 0 0 40px rgba(255,215,0,0.9), 0 0 60px rgba(255,165,0,0.4); }
 }
 .winner-contestant-name {
-  font-size: 16px; color: var(--sand);
-  margin-bottom: 6px; font-weight: 500;
+font-size: 16px; color: var(–sand);
+margin-bottom: 6px; font-weight: 500;
 }
 .winner-survivor-label {
-  font-family: 'Cinzel', serif;
-  font-size: 12px; letter-spacing: 2px;
-  color: var(--torch-glow); text-transform: uppercase;
-  margin-bottom: 28px;
+font-family: ‘Cinzel’, serif;
+font-size: 12px; letter-spacing: 2px;
+color: var(–torch-glow); text-transform: uppercase;
+margin-bottom: 28px;
 }
 .winner-end-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 14px 28px; border-radius: var(--radius);
-  background: linear-gradient(135deg, #c8961a, #8a6200);
-  color: white; border: none; font-family: 'Cinzel', serif;
-  font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
-  cursor: pointer; text-transform: uppercase;
-  box-shadow: 0 4px 20px rgba(200,150,26,0.35);
-  transition: transform 0.1s;
+display: inline-flex; align-items: center; gap: 8px;
+padding: 14px 28px; border-radius: var(–radius);
+background: linear-gradient(135deg, #c8961a, #8a6200);
+color: white; border: none; font-family: ‘Cinzel’, serif;
+font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
+cursor: pointer; text-transform: uppercase;
+box-shadow: 0 4px 20px rgba(200,150,26,0.35);
+transition: transform 0.1s;
 }
 .winner-end-btn:active { transform: scale(0.97); }
 .winner-still-in { margin-top: 24px; width: 100%; }
 .flame-winner-pulse .fn-fire {
-  animation: winnerPulse 0.6s ease-in-out infinite alternate !important;
-  font-size: 32px !important;
+animation: winnerPulse 0.6s ease-in-out infinite alternate !important;
+font-size: 32px !important;
 }
 @keyframes winnerPulse {
-  0%   { transform: scale(1);   filter: drop-shadow(0 0 12px var(--torch)); }
-  100% { transform: scale(1.5); filter: drop-shadow(0 0 32px gold); }
+0%   { transform: scale(1);   filter: drop-shadow(0 0 12px var(–torch)); }
+100% { transform: scale(1.5); filter: drop-shadow(0 0 32px gold); }
 }
 @keyframes confettiFall {
-  0%   { transform: translateY(0) rotate(0deg);       opacity: 1; }
-  80%  { opacity: 1; }
-  100% { transform: translateY(100vh) rotate(720deg);  opacity: 0; }
+0%   { transform: translateY(0) rotate(0deg);       opacity: 1; }
+80%  { opacity: 1; }
+100% { transform: translateY(100vh) rotate(720deg);  opacity: 0; }
 }
 ::-webkit-scrollbar{width:3px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
 </style>
+
 </head>
 <body>
 
@@ -712,6 +714,7 @@ body::before {
 </div>
 
 <!-- HEADER -->
+
 <header class="app-header">
   <div class="header-inner">
     <div class="logo">
@@ -730,9 +733,11 @@ body::before {
 </header>
 
 <!-- SCROLL AREA -->
+
 <div class="scroll-area" id="scrollArea">
 
   <!-- CURRENT -->
+
   <div class="page active" id="page-current">
     <div class="page-inner">
       <div class="page-spacer"></div>
@@ -741,6 +746,7 @@ body::before {
   </div>
 
   <!-- HISTORY -->
+
   <div class="page" id="page-history">
     <div class="page-inner">
       <div class="page-spacer"></div>
@@ -749,6 +755,7 @@ body::before {
   </div>
 
   <!-- TRIBE -->
+
   <div class="page" id="page-tribe">
     <div class="page-inner">
       <div class="page-spacer"></div>
@@ -759,6 +766,7 @@ body::before {
 </div>
 
 <!-- BOTTOM TABS -->
+
 <nav class="bottom-tabs">
   <div class="tab-item active" id="tab-current" onclick="switchTab('current')">
     <div class="tab-icon">🏝️</div>
@@ -775,6 +783,7 @@ body::before {
 </nav>
 
 <!-- NEW SEASON MODAL -->
+
 <div class="overlay" id="newSeasonModal">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -797,6 +806,7 @@ body::before {
 </div>
 
 <!-- ELIMINATE MODAL -->
+
 <div class="overlay" id="elimModal">
   <div class="sheet" style="min-height:auto;">
     <div class="sheet-handle"></div>
@@ -811,6 +821,7 @@ body::before {
 </div>
 
 <!-- END SEASON MODAL -->
+
 <div class="overlay" id="endSeasonModal">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -825,53 +836,58 @@ body::before {
 </div>
 
 <!-- SETTINGS MODAL -->
+
 <div class="overlay" id="settingsModal">
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">⚙️ Settings</div>
 
-    <div class="section-label" style="margin-top:4px;">🔥 Season</div>
-    <button class="btn btn-primary" onclick="closeModal('settingsModal'); openNewSeasonModal();">🏝️ Start New Season &amp; Draft</button>
-    <div id="endSeasonWrap" style="display:none; margin-top:10px;">
-      <button class="btn btn-danger" onclick="closeModal('settingsModal'); openEndSeasonModal();">🏆 End Season &amp; Crown Winner</button>
-    </div>
+```
+<div class="section-label" style="margin-top:4px;">🔥 Season</div>
+<button class="btn btn-primary" onclick="closeModal('settingsModal'); openNewSeasonModal();">🏝️ Start New Season &amp; Draft</button>
+<div id="endSeasonWrap" style="display:none; margin-top:10px;">
+  <button class="btn btn-danger" onclick="closeModal('settingsModal'); openEndSeasonModal();">🏆 End Season &amp; Crown Winner</button>
+</div>
 
-    <div class="divider"></div>
+<div class="divider"></div>
 
-    <div class="section-label">🌴 Tribe Members</div>
-    <div class="advanced-toggle" onclick="toggleTribeMembers()" style="margin-bottom:0;">
-      <span>Manage Tribe Members</span>
-      <span class="advanced-chevron" id="tribeMembersChevron">›</span>
-    </div>
-    <div id="tribeMembersPanel" style="display:none; margin-top:14px;">
-      <div id="psListEl"></div>
-      <button class="add-row-btn" onclick="addPlayerRow()" style="margin-top:6px;">+ Add Member</button>
-      <div style="margin-top:16px;">
-        <button class="btn btn-secondary" onclick="savePlayers()">Save Members</button>
-      </div>
-    </div>
+<div class="section-label">🌴 Tribe Members</div>
+<div class="advanced-toggle" onclick="toggleTribeMembers()" style="margin-bottom:0;">
+  <span>Manage Tribe Members</span>
+  <span class="advanced-chevron" id="tribeMembersChevron">›</span>
+</div>
+<div id="tribeMembersPanel" style="display:none; margin-top:14px;">
+  <div id="psListEl"></div>
+  <button class="add-row-btn" onclick="addPlayerRow()" style="margin-top:6px;">+ Add Member</button>
+  <div style="margin-top:16px;">
+    <button class="btn btn-secondary" onclick="savePlayers()">Save Members</button>
+  </div>
+</div>
 
-    <div class="divider"></div>
+<div class="divider"></div>
 
-    <div class="advanced-toggle" onclick="toggleAdvanced()">
-      <span>Advanced</span>
-      <span class="advanced-chevron" id="advancedChevron">›</span>
-    </div>
-    <div id="advancedPanel" style="display:none; margin-top:14px;">
-      <div class="section-label">🌴 Apps Script URL</div>
-      <div class="form-group">
-        <input type="text" class="form-input" id="scriptUrlInput" placeholder="Paste your Apps Script URL" style="font-size:12px;">
-      </div>
-      <button class="btn btn-secondary" onclick="saveScriptUrl()">Save URL</button>
-    </div>
+<div class="advanced-toggle" onclick="toggleAdvanced()">
+  <span>Advanced</span>
+  <span class="advanced-chevron" id="advancedChevron">›</span>
+</div>
+<div id="advancedPanel" style="display:none; margin-top:14px;">
+  <div class="section-label">🌴 Apps Script URL</div>
+  <div class="form-group">
+    <input type="text" class="form-input" id="scriptUrlInput" placeholder="Paste your Apps Script URL" style="font-size:12px;">
+  </div>
+  <button class="btn btn-secondary" onclick="saveScriptUrl()">Save URL</button>
+</div>
 
-    <div style="margin-top:24px;">
-      <button class="btn btn-secondary" onclick="closeModal('settingsModal')">Close</button>
-    </div>
+<div style="margin-top:24px;">
+  <button class="btn btn-secondary" onclick="closeModal('settingsModal')">Close</button>
+</div>
+```
+
   </div>
 </div>
 
 <!-- WINNER SHARE MODAL -->
+
 <div class="overlay" id="winnerShareModal">
   <div class="sheet" style="min-height:auto;">
     <div class="sheet-handle"></div>
@@ -886,6 +902,7 @@ body::before {
 </div>
 
 <!-- DRAFT OVERLAY -->
+
 <div id="draftOverlay">
   <button class="draft-skip-btn" id="draftSkipBtn" onclick="skipDraft()">Skip →</button>
   <button class="draft-mute-btn" id="draftMuteBtn" onclick="toggleMute()" style="display:none;">🔊</button>
@@ -909,6 +926,7 @@ body::before {
 </div>
 
 <!-- REPLAY OVERLAY -->
+
 <div id="replayOverlay">
   <!-- Title Screen -->
   <div class="replay-title-screen" id="replayTitleScreen">
@@ -2065,11 +2083,13 @@ function renderError() {
 </script>
 
 <!-- WINNER REVEAL OVERLAY — full screen takeover -->
+
 <div id="winnerRevealOverlay" style="display:none;position:fixed;inset:0;background:#000;z-index:500;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;">
   <canvas id="wrParticles" style="position:absolute;inset:0;pointer-events:none;z-index:0;width:100%;height:100%;"></canvas>
   <div id="wrFlash" style="position:fixed;inset:0;background:white;opacity:0;pointer-events:none;z-index:10;transition:opacity 0.1s;"></div>
 
   <!-- Phase 1: torch grid -->
+
   <div id="wrIntro" style="text-align:center;z-index:2;position:relative;width:100%;padding:0 12px;">
     <div id="wrIntroText" style="color:#e8d5a3;font-family:Cinzel,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;opacity:0;transition:opacity 1s ease;margin-bottom:8px;">The tribe has spoken</div>
     <div id="wrSeasonText" style="color:#ff9a3c;font-family:Cinzel,serif;font-size:13px;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;opacity:0;transition:opacity 0.8s ease 0.4s;"></div>
@@ -2077,6 +2097,7 @@ function renderError() {
   </div>
 
   <!-- Phase 2: winner card -->
+
   <div id="wrWinnerStage" style="display:none;flex-direction:column;align-items:center;text-align:center;z-index:2;position:relative;padding:20px 16px;width:100%;">
     <div id="wrBigTorch" style="font-size:72px;opacity:0;transform:scale(0.3);transition:all 0.7s cubic-bezier(0.34,1.56,0.64,1);filter:drop-shadow(0 0 30px #ff6b1a) drop-shadow(0 0 60px gold);margin-bottom:8px;">🔥</div>
     <div id="wrSoleLabel" style="font-family:Cinzel,serif;font-size:10px;letter-spacing:4px;color:#888;text-transform:uppercase;opacity:0;transition:opacity 0.5s ease 0.3s;margin-bottom:10px;">Sole Survivor</div>
